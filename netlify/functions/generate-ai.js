@@ -109,7 +109,7 @@ Izoh: Bu fallback demo javob. GEMINI_API_KEY qo‘yilgandan keyin real AI javob 
 
 async function callGemini(apiKey, prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
     apiKey;
 
   const response = await fetch(url, {
