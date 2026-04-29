@@ -403,13 +403,16 @@ function cleanAIContent(content) {
 }
 
 async function callGemini(apiKey, prompt) {
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
 
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/" +
     model +
     ":generateContent?key=" +
     apiKey;
+
+  // qolgan kod o‘zgarishsiz
+}
 
   const response = await fetch(url, {
     method: "POST",
