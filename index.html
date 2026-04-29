@@ -1884,7 +1884,7 @@
     }
 
     async function callGenerateFunction(payload){
-      const response = await fetch('/.netlify/functions/generate-ai', {
+      const response = await fetch('/api/generate-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
