@@ -6,6 +6,9 @@
 export const config = {
   maxDuration: 60
 };
+
+const requestMemory = new Map();
+const RATE_LIMIT_MS = 12000;
 export default async function handler(req, res) {
   setCorsHeaders(res);
 
@@ -16,7 +19,24 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST method allowed" });
   }
+  const ip =
+  req.headers["x-forwarded-for"]?.split(",")[0] ||
+  req.headers["x-real-ip"] ||
+  "unknown";
 
+const now = Date.now();
+const last = requestMemory.get(ip) || 0;
+
+if (now - last < RATE_LIMIT_MS) {
+  return res.status(429).json({
+    ok: false,
+    mode: "rate_limited",
+    error: "Juda tez so‘rov yuborildi. 10–15 soniyadan keyin qayta urinib ko‘ring."
+  });
+}
+
+requestMemory.set(ip, now);
+  
   try {
     const body = parseBody(req.body);
 
