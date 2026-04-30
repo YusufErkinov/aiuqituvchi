@@ -3,7 +3,9 @@
 // Kerakli Environment Variables:
 // GEMINI_API_KEY = Google AI Studio API key
 // GEMINI_MODEL   = gemini-2.5-flash yoki gemini-3-flash-preview (ixtiyoriy)
-
+export const config = {
+  maxDuration: 60
+};
 export default async function handler(req, res) {
   setCorsHeaders(res);
 
