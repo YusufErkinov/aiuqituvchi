@@ -892,6 +892,38 @@
     .rich-output .options div{margin:3px 0}
     .rich-output .answer-key{margin-top:8px; font-weight:700}
 
+
+    /* Frontend fix: natija preview cheklangan height va copy protection */
+    #docOutput{
+      max-height:520px;
+      overflow-y:auto;
+      padding-right:8px;
+      user-select:none;
+      -webkit-user-select:none;
+      -ms-user-select:none;
+      -webkit-touch-callout:none;
+    }
+    #docOutput *{
+      user-select:none;
+      -webkit-user-select:none;
+      -ms-user-select:none;
+    }
+    #outputBody,
+    #outputList{
+      max-height:390px;
+      overflow-y:auto;
+      padding-right:8px;
+    }
+    #outputBody::-webkit-scrollbar,
+    #outputList::-webkit-scrollbar,
+    #docOutput::-webkit-scrollbar{width:6px}
+    #outputBody::-webkit-scrollbar-thumb,
+    #outputList::-webkit-scrollbar-thumb,
+    #docOutput::-webkit-scrollbar-thumb{
+      background:rgba(80,120,180,.35);
+      border-radius:20px;
+    }
+
   </style>
 </head>
 <body>
@@ -905,9 +937,8 @@
         <button class="btn soft mobile-menu" onclick="toggleMenu()">Menyu</button>
         <div class="nav-links" id="navLinks">
           <button class="nav-link active" data-page="home" onclick="showPage('home')">Bosh sahifa</button>
-          <button class="nav-link" data-page="signup" onclick="showPage('signup')">Ro‘yxatdan o‘tish</button>
-          <button class="nav-link" data-page="dashboard" onclick="showPage('dashboard')">Kabinet demo</button>
-          <button class="btn" onclick="showPage('signup')">Donabay boshlash</button>
+          <button class="nav-link" data-auth="cabinet" data-page="dashboard" onclick="showPage('dashboard')">Shaxsiy kabinet</button>
+          <button class="btn" data-auth="primary" onclick="showPage('signup')">Ro‘yxatdan o‘tish</button>
         </div>
       </nav>
     </div>
@@ -923,8 +954,8 @@
               <h1>O‘qituvchilar uchun <span class="grad">AI yordamchi</span> test sayti</h1>
               <p class="lead">Endi platformada free trial reklama qilinmaydi. Asosiy taklif — Donabay tarif: har bir faylni yuklab olish 1 000 so‘m, eng kam hisob to‘ldirish 5 000 so‘m. Ko‘p ishlatadiganlar uchun Pro: 39 000 so‘mga 100 ta fayl.</p>
               <div class="hero-actions">
-                <button class="btn" onclick="showPage('signup')">🎁 donabay tarifni olish</button>
-                <button class="btn soft" onclick="showPage('dashboard')">Kabinetni ko‘rish</button>
+                <button class="btn" data-auth="primary" onclick="showPage('signup')">Ro‘yxatdan o‘tish</button>
+                <button class="btn soft" data-auth="cabinet" onclick="showPage('dashboard')">Shaxsiy kabinet</button>
               </div>
               <div class="proofs">
                 <div class="proof"><b>1 000</b><span>so‘m / 1 fayl</span></div>
@@ -961,7 +992,7 @@
                     <div class="doc-line w75"></div>
                     <div class="doc-line w90"></div>
                     <div class="doc-line w60"></div>
-                    <button class="btn" style="margin-top:8px;box-shadow:none" onclick="showPage('signup')">Sinab ko‘rish</button>
+                    <button class="btn" data-auth="primary" style="margin-top:8px;box-shadow:none" onclick="showPage('signup')">Ro‘yxatdan o‘tish</button>
                   </div>
                 </div>
               </div>
@@ -1384,7 +1415,7 @@
      * 2) SUPABASE_ANON_KEY ni o'zingizning anon public key bilan almashtiring
      * Service role key'ni bu yerga yozmang.
      ************************************************************/
-    const SUPABASE_URL = "https://zngjsbdkooaqwvhbvcws.supabase.co/rest/v1/";
+    const SUPABASE_URL = "https://zngjsbdkooaqwvhbvcws.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuZ2pzYmRrb29hcXd2aGJ2Y3dzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDUxMDEsImV4cCI6MjA5Mjk4MTEwMX0.GLelo2cLljCfI4WdtusL58fQlAd5SCbXBAg1icNHlAc";
 
     const isSupabaseConfigured =
@@ -1522,6 +1553,7 @@
     let isGenerating = false;
     let lastGenerateTime = 0;
     const GENERATE_COOLDOWN_MS = 12000;
+    let isRegistered = false;
     let currentPlan = 'Donabay';
     let balance = 0;
     let proFilesLeft = 0;
@@ -1547,7 +1579,8 @@
         totalDocs,
         totalDownloads,
         documents,
-        currentDoc
+        currentDoc,
+        isRegistered
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -1566,6 +1599,11 @@
         if(typeof data.totalDownloads === "number") totalDownloads = data.totalDownloads;
         if(Array.isArray(data.documents)) documents = data.documents;
         if(data.currentDoc) currentDoc = data.currentDoc;
+        if(typeof data.isRegistered === "boolean"){
+          isRegistered = data.isRegistered;
+        } else if(data.profile && data.profile.fullName && data.profile.phone){
+          isRegistered = true;
+        }
       }catch(err){
         console.warn("LocalStorage o‘qishda xatolik:", err);
       }
@@ -1649,6 +1687,9 @@
         profile.subject = subject;
         profile.grade = document.getElementById('grade').value;
         profile.need = need;
+        isRegistered = true;
+        saveState();
+        updateAuthUI();
 
         await trackEvent("signup_attempt", {
           full_name: profile.fullName,
@@ -1677,6 +1718,61 @@
       });
     }
 
+    function isRegisteredUser(){
+      return isRegistered === true;
+    }
+
+    function updateAuthUI(){
+      const registered = isRegisteredUser();
+
+      // Mayda "Ro‘yxatdan o‘tish" linki yashiriladi. Asosiy CTA yetarli.
+      document.querySelectorAll('[data-auth="signup"]').forEach(btn => {
+        btn.style.display = 'none';
+      });
+
+      // Ro‘yxatdan o‘tgan odamda kichik "Shaxsiy kabinet" linkini yashiramiz,
+      // chunki asosiy gradient button ham "Shaxsiy kabinet" bo‘ladi.
+      document.querySelectorAll('[data-auth="cabinet"]').forEach(btn => {
+        btn.textContent = 'Shaxsiy kabinet';
+        btn.style.display = registered ? 'none' : '';
+        btn.onclick = function(){
+          if(registered){
+            showPage('dashboard');
+          } else {
+            showPage('signup');
+            toast("Avval ro‘yxatdan o‘ting.");
+          }
+        };
+      });
+
+      document.querySelectorAll('[data-auth="primary"]').forEach(btn => {
+        if(registered){
+          btn.textContent = 'Shaxsiy kabinet';
+          btn.onclick = function(){ showPage('dashboard'); };
+        } else {
+          btn.textContent = 'Ro‘yxatdan o‘tish';
+          btn.onclick = function(){ showPage('signup'); };
+        }
+      });
+    }
+
+    function protectResultCopy(){
+      const targets = [
+        document.getElementById('docOutput'),
+        document.getElementById('outputBody'),
+        document.getElementById('outputList')
+      ].filter(Boolean);
+
+      targets.forEach(el => {
+        ['copy','cut','contextmenu','selectstart','dragstart'].forEach(eventName => {
+          el.addEventListener(eventName, function(e){
+            e.preventDefault();
+            toast('Natijani copy qilish yopiq. Faylni yuklab oling.');
+          });
+        });
+      });
+    }
+
     function syncProfileUI(){
       const name = profile.fullName || 'Ustoz';
       const first = name.split(' ')[0] || 'Ustoz';
@@ -1693,6 +1789,7 @@
 
       setAvatarContent('avatarText', initials);
       setAvatarContent('profilePhotoLarge', initials);
+      updateAuthUI();
     }
 
     function setAvatarContent(id, initials){
@@ -1732,6 +1829,7 @@
       if(genSubject) genSubject.value = profile.subject;
       syncProfileUI();
       saveState();
+      updateAuthUI();
       document.getElementById('profileSuccess').classList.add('show');
 
       await trackEvent("profile_updated", {
@@ -2421,6 +2519,7 @@
       localStorage.removeItem("oqituvchi_ai_session_id");
 
       currentPlan = 'Donabay';
+      isRegistered = false;
       balance = 0;
       proFilesLeft = 0;
       totalDocs = 0;
@@ -2439,6 +2538,7 @@
       updateUsageUI();
       renderDocuments();
       syncProfileUI();
+      updateAuthUI();
       showPage('home');
       trackEvent("logout_click");
       toast('Profildan chiqildi');
@@ -2462,6 +2562,8 @@
     updateUsageUI();
     renderDocuments();
     syncProfileUI();
+    protectResultCopy();
+    updateAuthUI();
   </script>
 </body>
 </html>
