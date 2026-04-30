@@ -1519,7 +1519,9 @@
     const PRO_FILE_LIMIT = 100;
 
     const STORAGE_KEY = "oqituvchi_ai_user_data_v1";
-
+    let isGenerating = false;
+    let lastGenerateTime = 0;
+    const GENERATE_COOLDOWN_MS = 12000;
     let currentPlan = 'Donabay';
     let balance = 0;
     let proFilesLeft = 0;
@@ -1786,6 +1788,21 @@
     }
 
     async function generateDoc(){
+      if (isGenerating) {
+        toast("AI javob tayyorlayapti. Kuting.");
+        return;
+      }
+
+        const now = Date.now();
+
+      if (now - lastGenerateTime < GENERATE_COOLDOWN_MS) {
+      const wait = Math.ceil((GENERATE_COOLDOWN_MS - (now - lastGenerateTime)) / 1000);
+      toast(wait + " soniyadan keyin qayta urinib ko‘ring.");
+        return;
+      }
+
+isGenerating = true;
+lastGenerateTime = now;
       const type = document.getElementById('docType').value;
       const subject = document.getElementById('genSubject').value;
       const grade = document.getElementById('genGrade').value;
@@ -1813,24 +1830,27 @@
 
         aiContent = aiResult.content || "";
         aiMode = aiResult.mode || "netlify_function";
-      }catch(err){
-        console.warn("AI function error:", err);
-        aiContent = buildDemoContent(type, subject, grade, topic);
-        aiMode = "frontend_fallback";
+     }catch(err){
+  console.warn("AI function error:", err);
 
-        await trackEvent("ai_function_error", {
-          message: String(err),
-          doc_type: type,
-          subject,
-          grade,
-          topic
-        });
-      }finally{
-        if(btn){
-          btn.textContent = oldBtnText || 'AI bilan yaratish';
-          btn.disabled = false;
-        }
-      }
+  await trackEvent("ai_function_error", {
+    message: String(err),
+    doc_type: type,
+    subject,
+    grade,
+    topic
+  });
+
+  toast("AI javob bermadi. 10–15 soniyadan keyin qayta urinib ko‘ring.");
+  return;
+} }finally{
+  isGenerating = false;
+
+  if(btn){
+    btn.textContent = oldBtnText || 'AI bilan yaratish';
+    btn.disabled = false;
+  }
+}
 
       totalDocs += 1;
 
