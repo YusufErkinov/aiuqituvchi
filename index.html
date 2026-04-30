@@ -1788,62 +1788,133 @@
     }
 
     async function generateDoc(){
-      if (isGenerating) {
-        toast("AI javob tayyorlayapti. Kuting.");
-        return;
-      }
+  if (isGenerating) {
+    toast("AI javob tayyorlayapti. Kuting.");
+    return;
+  }
 
-        const now = Date.now();
+  const now = Date.now();
 
-      if (now - lastGenerateTime < GENERATE_COOLDOWN_MS) {
-      const wait = Math.ceil((GENERATE_COOLDOWN_MS - (now - lastGenerateTime)) / 1000);
-      toast(wait + " soniyadan keyin qayta urinib ko‘ring.");
-        return;
-      }
+  if (now - lastGenerateTime < GENERATE_COOLDOWN_MS) {
+    const wait = Math.ceil((GENERATE_COOLDOWN_MS - (now - lastGenerateTime)) / 1000);
+    toast(wait + " soniyadan keyin qayta urinib ko‘ring.");
+    return;
+  }
 
-isGenerating = true;
-lastGenerateTime = now;
-      const type = document.getElementById('docType').value;
-      const subject = document.getElementById('genSubject').value;
-      const grade = document.getElementById('genGrade').value;
-      const topic = document.getElementById('topic').value || 'Mavzu kiritilmagan';
+  isGenerating = true;
+  lastGenerateTime = now;
 
-      const btn = document.getElementById('generateBtn');
-      const oldBtnText = btn ? btn.textContent : '';
-      if(btn){
-        btn.textContent = 'AI javob tayyorlanmoqda...';
-        btn.disabled = true;
-      }
+  const type = document.getElementById('docType').value;
+  const subject = document.getElementById('genSubject').value;
+  const grade = document.getElementById('genGrade').value;
+  const topic = document.getElementById('topic').value || 'Mavzu kiritilmagan';
 
-      await trackEvent("generator_click", { doc_type: type, subject, grade, topic });
+  const btn = document.getElementById('generateBtn');
+  const oldBtnText = btn ? btn.textContent : '';
 
-      let aiContent = "";
-      let aiMode = "fallback";
+  if(btn){
+    btn.textContent = 'AI javob tayyorlanmoqda...';
+    btn.disabled = true;
+  }
 
-      try{
-        const aiResult = await callGenerateFunction({
-          docType: type,
-          subject,
-          grade,
-          topic
-        });
-
-        aiContent = aiResult.content || "";
-        aiMode = aiResult.mode || "netlify_function";
-     }catch(err){
-  console.warn("AI function error:", err);
-
-  await trackEvent("ai_function_error", {
-    message: String(err),
+  await trackEvent("generator_click", {
     doc_type: type,
     subject,
     grade,
     topic
   });
 
-  toast("AI javob bermadi. 10–15 soniyadan keyin qayta urinib ko‘ring.");
-  return;
-} }finally{
+  let aiContent = "";
+  let aiMode = "gemini";
+
+  try {
+    const aiResult = await callGenerateFunction({
+      docType: type,
+      subject,
+      grade,
+      topic
+    });
+
+    aiContent = aiResult.content || "";
+    aiMode = aiResult.mode || "gemini";
+
+  } catch(err) {
+    console.warn("AI function error:", err);
+
+    await trackEvent("ai_function_error", {
+      message: String(err),
+      doc_type: type,
+      subject,
+      grade,
+      topic
+    });
+
+    toast("AI javob bermadi. 10–15 soniyadan keyin qayta urinib ko‘ring.");
+    return;
+
+  } finally {
+    isGenerating = false;
+
+    if(btn){
+      btn.textContent = oldBtnText || 'AI bilan yaratish';
+      btn.disabled = false;
+    }
+  }
+
+  totalDocs += 1;
+
+  const items = splitAIContentToItems(aiContent);
+  const content = normalizeAIContent(
+    aiContent || buildPlainText(type, subject, grade, topic, items),
+    type
+  );
+
+  currentDoc = {
+    id: Date.now(),
+    type,
+    subject,
+    grade,
+    topic,
+    title: type + ' - ' + topic,
+    content,
+    items,
+    createdAt: new Date().toLocaleString('uz-UZ'),
+    paidDownload: false,
+    aiMode
+  };
+
+  documents.unshift(currentDoc);
+  saveState();
+
+  await saveDocumentToSupabase(currentDoc);
+
+  const emptyState = document.getElementById('emptyState');
+  if(emptyState) emptyState.style.display = 'none';
+
+  document.getElementById('docOutput').classList.add('show');
+  document.getElementById('outputTitle').textContent = type + ' preview';
+  document.getElementById('outputMeta').textContent =
+    subject + ' • ' + grade + ' • Mavzu: ' + topic + ' • Rejim: ' + aiMode;
+
+  const outputBody = document.getElementById('outputBody');
+  if(outputBody){
+    outputBody.innerHTML = buildRichHtmlContent(content, type);
+  }
+
+  updateUsageUI();
+  renderDocuments();
+
+  await trackEvent("ai_result_rendered", {
+    doc_type: type,
+    subject,
+    grade,
+    topic,
+    mode: aiMode,
+    content_length: content.length
+  });
+
+  toast(aiMode === 'gemini' ? 'Gemini AI javobi tayyor' : 'AI javob tayyorlandi');
+} finally{
   isGenerating = false;
 
   if(btn){
