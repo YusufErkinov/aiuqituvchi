@@ -2027,26 +2027,36 @@
 }
 
     async function callGenerateFunction(payload){
-      const response = await fetch('/api/generate-ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+  const response = await fetch('/api/generate-ai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
 
-      const data = await response.json().catch(() => null);
+  const text = await response.text();
 
-      if(!response.ok){
-        throw new Error((data && data.error) ? data.error : 'Netlify Function xatosi');
-      }
+  let data;
+  try{
+    data = JSON.parse(text);
+  }catch(err){
+    console.error("API raw response:", text);
+    throw new Error("API JSON qaytarmadi: " + text);
+  }
 
-      if(!data || !data.ok){
-        throw new Error((data && data.error) ? data.error : 'AI javob qaytmadi');
-      }
+  if(!response.ok){
+    console.error("API error data:", data);
+    throw new Error(data.error || data.details || "API xatosi");
+  }
 
-      return data;
-    }
+  if(!data.ok){
+    console.error("API not ok:", data);
+    throw new Error(data.error || "AI javob bermadi");
+  }
+
+  return data;
+}
 
     function normalizeAIContent(rawContent, type){
       let text = String(rawContent || '')
