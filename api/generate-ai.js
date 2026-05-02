@@ -117,8 +117,140 @@ function buildPrompt({ docType, subject, grade, topic }) {
     type.includes("slayd") ||
     type.includes("prezentatsiya")
   ) {
-    return buildPresentationPrompt({ subject, grade, topic });
-  }
+    function buildPresentationPrompt({ subject, grade, topic }) {
+  return `
+Sen professional prezentatsiya dizayneri, metodist va AI pitch deck yaratuvchisan.
+
+VAZIFA:
+${subject} fanidan ${grade} uchun "${topic}" mavzusida haqiqiy PowerPoint taqdimot uchun strukturali JSON yarat.
+
+MUHIM:
+- Javob FAQAT JSON bo‘lsin.
+- Markdown ishlatma.
+- \`\`\`json yozma.
+- Izoh yozma.
+- JSON tashqarisida hech qanday matn bo‘lmasin.
+- Matnlar o‘zbek tilida bo‘lsin.
+- Slayd matnlari qisqa, aniq va o‘quvchi tushunadigan bo‘lsin.
+- Har bir slayd uchun vizual tavsiya bo‘lsin.
+- Zerikarli matn emas, chiroyli taqdimotga mos kontent tuz.
+- 7–9 ta slayd yetarli.
+
+QAYTARILADIGAN JSON QOLIPI:
+{
+  "presentationTitle": "${topic}",
+  "subject": "${subject}",
+  "grade": "${grade}",
+  "theme": "modern_edtech_blue",
+  "style": {
+    "background": "dark_gradient",
+    "primaryColor": "#5B7CFF",
+    "accentColor": "#22D3EE",
+    "font": "Arial",
+    "mood": "modern, clean, educational, premium"
+  },
+  "slides": [
+    {
+      "type": "title",
+      "title": "${topic}",
+      "subtitle": "${grade} ${subject} darsi",
+      "visual": "large_ai_badge"
+    },
+    {
+      "type": "content",
+      "title": "Asosiy tushuncha",
+      "bullets": [
+        "1-qisqa fikr",
+        "2-qisqa fikr",
+        "3-qisqa fikr"
+      ],
+      "visual": "concept_icon",
+      "speakerNote": "O‘qituvchi uchun qisqa tushuntirish."
+    },
+    {
+      "type": "comparison",
+      "title": "Taqqoslash",
+      "leftTitle": "1-tomon",
+      "leftPoints": [
+        "1-fikr",
+        "2-fikr"
+      ],
+      "rightTitle": "2-tomon",
+      "rightPoints": [
+        "1-fikr",
+        "2-fikr"
+      ],
+      "visual": "two_column_cards"
+    },
+    {
+      "type": "process",
+      "title": "Jarayon bosqichlari",
+      "steps": [
+        "1-bosqich",
+        "2-bosqich",
+        "3-bosqich"
+      ],
+      "visual": "step_timeline"
+    },
+    {
+      "type": "example",
+      "title": "Amaliy misol",
+      "exampleTitle": "Misol",
+      "exampleText": "Mavzuga mos sodda amaliy misol.",
+      "solutionSteps": [
+        "1-qadam",
+        "2-qadam",
+        "3-qadam"
+      ],
+      "visual": "example_card"
+    },
+    {
+      "type": "activity",
+      "title": "Interaktiv topshiriq",
+      "task": "O‘quvchilar bajaradigan qisqa topshiriq.",
+      "instructions": [
+        "1-ko‘rsatma",
+        "2-ko‘rsatma",
+        "3-ko‘rsatma"
+      ],
+      "visual": "activity_box"
+    },
+    {
+      "type": "summary",
+      "title": "Xulosa",
+      "bullets": [
+        "1-asosiy xulosa",
+        "2-asosiy xulosa",
+        "3-asosiy xulosa"
+      ],
+      "visual": "summary_checklist"
+    }
+  ]
+}
+
+SLAYD TURLARI:
+- title
+- content
+- comparison
+- process
+- example
+- activity
+- summary
+
+QOIDALAR:
+- "slides" massivida kamida 7 ta slayd bo‘lsin.
+- Har bir slaydda "type" bo‘lsin.
+- Har bir slaydda "title" bo‘lsin.
+- content slaydlarda 3–5 ta bullet bo‘lsin.
+- comparison slaydda leftTitle, leftPoints, rightTitle, rightPoints bo‘lsin.
+- process slaydda steps bo‘lsin.
+- example slaydda exampleTitle, exampleText, solutionSteps bo‘lsin.
+- activity slaydda task va instructions bo‘lsin.
+- summary slaydda bullets bo‘lsin.
+- Slayd matnlari uzun bo‘lmasin.
+- JSON valid bo‘lsin.
+`;
+}
 
   return buildGeneralPrompt({ docType, subject, grade, topic });
 }
@@ -481,6 +613,8 @@ Mavzu bo‘yicha umumiy xulosa beriladi.`;
 
 function cleanAIContent(content) {
   return String(content || "")
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
     .replace(/\r/g, "")
     .replace(/\*\*/g, "")
     .replace(/`/g, "")
