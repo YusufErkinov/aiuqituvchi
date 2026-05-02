@@ -1,0 +1,873 @@
+// api/generate-pptx.js
+// Vercel Serverless Function: Hybrid PPTX image router with Imagen fallback chain
+// POST /api/generate-pptx
+//
+// Body:
+// {
+//   "title": "Taqdimot nomi",
+//   "slides": [
+//     {
+//       "title": "Ona plata",
+//       "body": "Ona plata kompyuterning asosiy platasi...",
+//       "bullets": ["Protsessor ulanadi", "RAM ulanadi"]
+//     }
+//   ]
+// }
+//
+// ENV:
+// GEMINI_API_KEY=...
+// GEMINI_MODEL=gemini-3.1-flash-lite-preview
+// IMAGEN_MODEL_FAST=imagen-4.0-fast-generate-001
+// IMAGEN_MODEL_STANDARD=imagen-4.0-generate-001
+// IMAGEN_MODEL_ULTRA=imagen-4.0-ultra-generate-001
+// PEXELS_API_KEY=...              // ixtiyoriy
+// UNSPLASH_ACCESS_KEY=...         // ixtiyoriy
+
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
+import PptxGenJS from "pptxgenjs";
+
+export const config = {
+  maxDuration: 60
+};
+
+const ROUTER_SYSTEM_PROMPT = `
+You are an image-routing classifier for an automated PPTX slide generator.
+
+Analyze one slide and choose the best image route:
+
+FACTUAL:
+Use when the slide is about a concrete, real-world, visually identifiable subject:
+hardware, computer components, devices, tools, machines, people, places, real objects.
+Return a short English search query for Pexels/Unsplash.
+
+ABSTRACT:
+Use when the slide is about concepts, processes, logic, cybersecurity, AI, software ideas,
+future scenarios, invisible systems, innovation, or anything better shown as a generated concept image.
+Return a detailed English image generation prompt.
+
+STRICT OUTPUT:
+Return ONLY valid JSON. No markdown. No explanation. No extra keys.
+
+FACTUAL schema:
+{
+  "image_type": "FACTUAL",
+  "search_query": "english query here"
+}
+
+ABSTRACT schema:
+{
+  "image_type": "ABSTRACT",
+  "image_prompt": "english image prompt here"
+}
+
+Rules:
+- Output strings must be English.
+- FACTUAL search_query: 3-8 words, search optimized, main visual object first.
+- ABSTRACT image_prompt: modern educational presentation style, wide 16:9, no text in image.
+- Physical object/device = prefer FACTUAL.
+- Concept/workflow/future idea = prefer ABSTRACT.
+`;
+
+const defaultSlides = [
+  {
+    title: "Ona plata",
+    body: "Ona plata kompyuterning asosiy platasi bo‘lib, protsessor, RAM va boshqa qurilmalarni bog‘laydi.",
+    bullets: ["Komponentlarni ulaydi", "Protsessor va RAM shu plataga o‘rnatiladi", "Portlar va chipset orqali boshqaradi"]
+  },
+  {
+    title: "Kiberxavfsizlik",
+    body: "Kiberxavfsizlik axborot tizimlari va ma’lumotlarni raqamli tahdidlardan himoya qilishga qaratilgan.",
+    bullets: ["Parollarni himoyalash", "Zararli dasturlardan saqlanish", "Shaxsiy ma’lumotlarni xavfsiz saqlash"]
+  }
+];
+
+export default async function handler(req, res) {
+  setCorsHeaders(res);
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).json({ ok: true });
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Only POST method allowed" });
+  }
+
+  try {
+    const body = parseBody(req.body);
+    const slides = normalizeSlides(body.slides || defaultSlides);
+    const title = body.title || "O‘qituvchi AI taqdimoti";
+
+    if (!slides.length) {
+      return res.status(400).json({ ok: false, error: "slides ro‘yxati bo‘sh" });
+    }
+
+    const pptxBuffer = await createPresentation(slides, title);
+    const fileName = makeFileName(title);
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Cache-Control", "no-store");
+
+    return res.status(200).send(pptxBuffer);
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mode: "pptx_error",
+      error: error.message || "Unknown PPTX error"
+    });
+  }
+}
+
+function setCorsHeaders(res) {
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
+function parseBody(body) {
+  if (!body) return {};
+  if (typeof body === "string") {
+    try { return JSON.parse(body); } catch { return {}; }
+  }
+  return body;
+}
+
+function normalizeSlides(slides) {
+  if (!Array.isArray(slides)) return [];
+
+  return slides
+    .map(slide => ({
+      title: String(slide.title || "Slayd").trim(),
+      body: String(slide.body || "").trim(),
+      bullets: Array.isArray(slide.bullets)
+        ? slide.bullets.map(x => String(x || "").trim()).filter(Boolean).slice(0, 6)
+        : []
+    }))
+    .filter(slide => slide.title || slide.body || slide.bullets.length)
+    .slice(0, 10);
+}
+
+function makeFileName(title) {
+  const safe = String(title || "presentation")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50) || "presentation";
+
+  return safe + ".pptx";
+}
+
+function unique(items) {
+  return [...new Set(items.filter(Boolean))];
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function clean(text) {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function safeJsonParse(text) {
+  const cleaned = String(text || "")
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) return JSON.parse(match[0]);
+
+  throw new Error("Classifier JSON parse failed: " + cleaned);
+}
+
+function slideText(slide) {
+  return [slide.title, slide.body, ...(slide.bullets || [])]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function heuristicRoute(slide) {
+  const t = slideText(slide);
+
+  const factual = [
+    ["ona plata", "computer motherboard close up"],
+    ["motherboard", "computer motherboard close up"],
+    ["ram", "computer RAM memory module"],
+    ["xotira", "computer RAM memory module"],
+    ["protsessor", "computer processor CPU close up"],
+    ["cpu", "computer processor CPU close up"],
+    ["monitor", "computer monitor on desk"],
+    ["klaviatura", "computer keyboard close up"],
+    ["keyboard", "computer keyboard close up"],
+    ["sichqoncha", "computer mouse close up"],
+    ["printer", "office printer close up"],
+    ["skaner", "document scanner device"],
+    ["router", "wifi router device"],
+    ["server", "server rack data center"],
+    ["ssd", "solid state drive close up"],
+    ["video karta", "graphics card GPU close up"],
+    ["gpu", "graphics card GPU close up"]
+  ];
+
+  for (const [key, query] of factual) {
+    if (t.includes(key)) {
+      return { image_type: "FACTUAL", search_query: query };
+    }
+  }
+
+  return {
+    image_type: "ABSTRACT",
+    image_prompt:
+      `Clean modern educational presentation illustration about "${slide.title}", ` +
+      `professional EdTech style, wide 16:9 composition, soft gradients, no text`
+  };
+}
+
+async function callGeminiClassifier(payload) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY missing");
+
+  const models = unique([
+    process.env.GEMINI_MODEL,
+    process.env.GEMINI_TEXT_MODEL,
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash"
+  ]);
+
+  let lastError = "";
+
+  for (const model of models) {
+    try {
+      const url =
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+        model +
+        ":generateContent?key=" +
+        apiKey;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: ROUTER_SYSTEM_PROMPT }]
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: JSON.stringify(payload) }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            topP: 0.8,
+            maxOutputTokens: 512,
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = `${model}: ${errorText}`;
+
+        if (response.status === 429 || response.status === 503) {
+          await sleep(700);
+          continue;
+        }
+
+        throw new Error(lastError);
+      }
+
+      const data = await response.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } catch (err) {
+      lastError = err.message;
+
+      if (
+        String(err.message).includes("429") ||
+        String(err.message).includes("503") ||
+        String(err.message).includes("UNAVAILABLE") ||
+        String(err.message).includes("RESOURCE_EXHAUSTED")
+      ) {
+        await sleep(700);
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  throw new Error("All Gemini classifier models failed: " + lastError);
+}
+
+async function classifySlide(slide) {
+  const payload = {
+    slide_title: slide.title || "",
+    slide_body: slide.body || "",
+    bullet_points: slide.bullets || []
+  };
+
+  try {
+    const raw = await callGeminiClassifier(payload);
+    const parsed = safeJsonParse(raw);
+
+    if (parsed.image_type === "FACTUAL" && parsed.search_query) {
+      return { image_type: "FACTUAL", search_query: clean(parsed.search_query) };
+    }
+
+    if (parsed.image_type === "ABSTRACT" && parsed.image_prompt) {
+      return { image_type: "ABSTRACT", image_prompt: clean(parsed.image_prompt) };
+    }
+
+    throw new Error("Invalid classifier result: " + raw);
+  } catch (err) {
+    console.warn("[Classifier fallback]", slide.title, "-", err.message);
+    return heuristicRoute(slide);
+  }
+}
+
+async function downloadTemp(url, ext = "jpg") {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("Image download failed: " + url);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const file = path.join(
+    os.tmpdir(),
+    `slide-img-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  );
+
+  await fs.writeFile(file, buffer);
+  return file;
+}
+
+async function pexelsImage(query) {
+  if (!process.env.PEXELS_API_KEY) {
+    throw new Error("PEXELS_API_KEY missing");
+  }
+
+  const url =
+    "https://api.pexels.com/v1/search?query=" +
+    encodeURIComponent(query) +
+    "&per_page=1&orientation=landscape";
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: process.env.PEXELS_API_KEY
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error("Pexels error: " + await response.text());
+  }
+
+  const data = await response.json();
+  const photo = data?.photos?.[0];
+
+  if (!photo) {
+    throw new Error("No Pexels result");
+  }
+
+  const imageUrl = photo.src.large2x || photo.src.large || photo.src.original;
+
+  return {
+    kind: "path",
+    value: await downloadTemp(imageUrl, "jpg"),
+    source: "pexels",
+    query
+  };
+}
+
+async function unsplashImage(query) {
+  if (!process.env.UNSPLASH_ACCESS_KEY) {
+    throw new Error("UNSPLASH_ACCESS_KEY missing");
+  }
+
+  const url =
+    "https://api.unsplash.com/search/photos?query=" +
+    encodeURIComponent(query) +
+    "&per_page=1&orientation=landscape";
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error("Unsplash error: " + await response.text());
+  }
+
+  const data = await response.json();
+  const photo = data?.results?.[0];
+
+  if (!photo) {
+    throw new Error("No Unsplash result");
+  }
+
+  const imageUrl = photo.urls.regular || photo.urls.full;
+
+  return {
+    kind: "path",
+    value: await downloadTemp(imageUrl, "jpg"),
+    source: "unsplash",
+    query
+  };
+}
+
+async function factualImage(query) {
+  const errors = [];
+
+  if (process.env.PEXELS_API_KEY) {
+    try {
+      return await pexelsImage(query);
+    } catch (err) {
+      errors.push("Pexels: " + err.message);
+    }
+  }
+
+  if (process.env.UNSPLASH_ACCESS_KEY) {
+    try {
+      return await unsplashImage(query);
+    } catch (err) {
+      errors.push("Unsplash: " + err.message);
+    }
+  }
+
+  throw new Error(errors.join(" | ") || "No factual image API key");
+}
+
+function extractImagenBase64(data) {
+  return (
+    data?.predictions?.[0]?.bytesBase64Encoded ||
+    data?.predictions?.[0]?.image?.bytesBase64Encoded ||
+    data?.predictions?.[0]?.content?.bytesBase64Encoded ||
+    data?.images?.[0]?.bytesBase64Encoded ||
+    data?.generatedImages?.[0]?.image?.imageBytes ||
+    data?.generatedImages?.[0]?.imageBytes ||
+    ""
+  );
+}
+
+async function imagenImage(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY missing");
+  }
+
+  const models = unique([
+    process.env.IMAGEN_MODEL_FAST || "imagen-4.0-fast-generate-001",
+    process.env.IMAGEN_MODEL_STANDARD || "imagen-4.0-generate-001",
+    process.env.IMAGEN_MODEL_ULTRA || "imagen-4.0-ultra-generate-001"
+  ]);
+
+  let lastError = "";
+
+  for (const model of models) {
+    try {
+      const url =
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+        model +
+        ":predict?key=" +
+        apiKey;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          instances: [
+            {
+              prompt
+            }
+          ],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: "16:9"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = `${model}: ${errorText}`;
+
+        if (response.status === 429 || response.status === 503) {
+          console.warn(`[Imagen fallback] ${model} failed, trying next model...`);
+          await sleep(700);
+          continue;
+        }
+
+        throw new Error(lastError);
+      }
+
+      const data = await response.json();
+      const b64 = extractImagenBase64(data);
+
+      if (!b64) {
+        throw new Error(`No image data returned from ${model}`);
+      }
+
+      const file = path.join(
+        os.tmpdir(),
+        `imagen-${Date.now()}-${Math.random().toString(36).slice(2)}.png`
+      );
+
+      await fs.writeFile(file, Buffer.from(b64, "base64"));
+
+      return {
+        kind: "path",
+        value: file,
+        source: model,
+        prompt
+      };
+    } catch (err) {
+      lastError = err.message;
+
+      if (
+        String(err.message).includes("429") ||
+        String(err.message).includes("503") ||
+        String(err.message).includes("RESOURCE_EXHAUSTED") ||
+        String(err.message).includes("UNAVAILABLE") ||
+        String(err.message).toLowerCase().includes("quota")
+      ) {
+        console.warn(`[Imagen fallback] trying next model after failure: ${model}`);
+        await sleep(700);
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  throw new Error("All Imagen models failed: " + lastError);
+}
+
+function svgData(slide, mode = "abstract") {
+  const factual = mode === "factual";
+  const c1 = factual ? "#dbeafe" : "#eef2ff";
+  const c2 = factual ? "#67e8f9" : "#a78bfa";
+  const c3 = factual ? "#2563eb" : "#22d3ee";
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${c1}"/>
+      <stop offset=".55" stop-color="${c2}"/>
+      <stop offset="1" stop-color="${c3}"/>
+    </linearGradient>
+    <filter id="b"><feGaussianBlur stdDeviation="35"/></filter>
+  </defs>
+  <rect width="1536" height="1024" fill="url(#g)"/>
+  <circle cx="280" cy="240" r="170" fill="rgba(255,255,255,.34)" filter="url(#b)"/>
+  <circle cx="1200" cy="760" r="260" fill="rgba(255,255,255,.22)" filter="url(#b)"/>
+  <rect x="260" y="210" width="1016" height="604" rx="70" fill="rgba(255,255,255,.26)" stroke="rgba(255,255,255,.55)" stroke-width="3"/>
+  <path d="M410 655 C560 490,690 560,800 390 C940 170,1090 330,1160 245" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="410" cy="655" r="38" fill="rgba(255,255,255,.9)"/>
+  <circle cx="800" cy="390" r="38" fill="rgba(255,255,255,.9)"/>
+  <circle cx="1160" cy="245" r="38" fill="rgba(255,255,255,.9)"/>
+  </svg>`;
+
+  return {
+    kind: "data",
+    value: "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64"),
+    source: "local-svg",
+    prompt: slide.title || ""
+  };
+}
+
+async function abstractImage(prompt, slide) {
+  try {
+    return await imagenImage(prompt);
+  } catch (err) {
+    console.warn("[Abstract fallback]", slide.title, "-", err.message);
+    return svgData(slide, "abstract");
+  }
+}
+
+function fallbackPrompt(slide) {
+  return (
+    `Clean modern educational presentation illustration about "${slide.title}", ` +
+    `professional EdTech style, wide 16:9 composition, soft gradients, no text`
+  );
+}
+
+async function resolveImage(slide) {
+  const route = await classifySlide(slide);
+
+  if (route.image_type === "FACTUAL") {
+    try {
+      return { ...route, image: await factualImage(route.search_query) };
+    } catch (err) {
+      console.warn("[Factual fallback]", slide.title, "-", err.message);
+      const prompt = fallbackPrompt(slide);
+      return {
+        image_type: "ABSTRACT",
+        image_prompt: prompt,
+        fallback_from: "FACTUAL",
+        image: await abstractImage(prompt, slide)
+      };
+    }
+  }
+
+  const prompt = route.image_prompt || fallbackPrompt(slide);
+
+  return {
+    ...route,
+    image: await abstractImage(prompt, slide)
+  };
+}
+
+function addImage(slide, img, opts) {
+  if (!img) return;
+
+  if (img.kind === "path") {
+    slide.addImage({ path: img.value, ...opts });
+  }
+
+  if (img.kind === "data") {
+    slide.addImage({ data: img.value, ...opts });
+  }
+}
+
+function addCover(pptx, slides, title) {
+  const slide = pptx.addSlide();
+
+  slide.background = { color: "07101D" };
+
+  slide.addShape("rect", {
+    x: 0,
+    y: 0,
+    w: 13.333,
+    h: 7.5,
+    fill: { color: "07101D" },
+    line: { color: "07101D" }
+  });
+
+  slide.addShape("arc", {
+    x: -1.3,
+    y: -1.0,
+    w: 5.4,
+    h: 5.4,
+    fill: { color: "5B7CFF", transparency: 35 },
+    line: { color: "5B7CFF", transparency: 100 }
+  });
+
+  slide.addShape("arc", {
+    x: 9.4,
+    y: 4.0,
+    w: 5.2,
+    h: 5.2,
+    fill: { color: "22D3EE", transparency: 35 },
+    line: { color: "22D3EE", transparency: 100 }
+  });
+
+  slide.addText(title || "O‘qituvchi AI", {
+    x: 0.8,
+    y: 1.45,
+    w: 11.8,
+    h: 0.75,
+    fontFace: "Aptos Display",
+    fontSize: 38,
+    bold: true,
+    color: "FFFFFF",
+    fit: "shrink"
+  });
+
+  slide.addText("Hybrid Image Router bilan avtomatik PPTX", {
+    x: 0.85,
+    y: 2.35,
+    w: 11.2,
+    h: 0.48,
+    fontFace: "Aptos",
+    fontSize: 20,
+    color: "CFE8FF"
+  });
+
+  slide.addText(
+    "FAKTIK slaydlar uchun real photo search • ABSTRAKT slaydlar uchun Imagen fallback chain",
+    {
+      x: 0.85,
+      y: 3.05,
+      w: 11.2,
+      h: 0.38,
+      fontFace: "Aptos",
+      fontSize: 14,
+      color: "A8B5CB"
+    }
+  );
+
+  slide.addText(`${slides.length} ta slayd`, {
+    x: 0.85,
+    y: 5.85,
+    w: 4.0,
+    h: 0.3,
+    fontFace: "Aptos",
+    fontSize: 14,
+    bold: true,
+    color: "22D3EE"
+  });
+}
+
+function addContent(slide, data, routed, idx, total) {
+  slide.background = { color: "F8FAFC" };
+
+  slide.addShape("rect", {
+    x: 0.35,
+    y: 0.22,
+    w: 12.63,
+    h: 7.06,
+    rectRadius: 0.18,
+    fill: { color: "FFFFFF" },
+    line: { color: "E2E8F0", transparency: 10 }
+  });
+
+  slide.addText(data.title || "", {
+    x: 0.55,
+    y: 0.35,
+    w: 12.2,
+    h: 0.55,
+    fontFace: "Aptos Display",
+    fontSize: 25,
+    bold: true,
+    color: "0F172A",
+    fit: "shrink"
+  });
+
+  const body = clean(data.body || "");
+
+  if (body) {
+    slide.addText(body, {
+      x: 0.72,
+      y: 1.15,
+      w: 5.85,
+      h: 1.15,
+      fontFace: "Aptos",
+      fontSize: 16,
+      color: "334155",
+      valign: "mid",
+      fit: "shrink",
+      margin: 0.04
+    });
+  }
+
+  const bullets = (data.bullets || []).slice(0, 6);
+
+  if (bullets.length) {
+    const runs = bullets.map(item => ({
+      text: clean(item),
+      options: {
+        bullet: { type: "bullet" },
+        hanging: 4
+      }
+    }));
+
+    slide.addText(runs, {
+      x: 0.85,
+      y: body ? 2.55 : 1.3,
+      w: 5.65,
+      h: body ? 3.25 : 4.45,
+      fontFace: "Aptos",
+      fontSize: 15,
+      color: "1E293B",
+      fit: "shrink",
+      paraSpaceAfterPt: 8,
+      margin: 0.06
+    });
+  }
+
+  addImage(slide, routed?.image, {
+    x: 7.0,
+    y: 1.2,
+    w: 5.55,
+    h: 4.75,
+    sizing: {
+      type: "cover",
+      x: 7.0,
+      y: 1.2,
+      w: 5.55,
+      h: 4.75
+    }
+  });
+
+  const factual = routed?.image_type === "FACTUAL";
+
+  slide.addShape("rect", {
+    x: 7.0,
+    y: 6.05,
+    w: 5.55,
+    h: 0.42,
+    rectRadius: 0.08,
+    fill: { color: factual ? "DBEAFE" : "F3E8FF" },
+    line: { color: factual ? "BFDBFE" : "E9D5FF" }
+  });
+
+  slide.addText(
+    factual
+      ? `FACTUAL • ${routed.search_query || ""}`
+      : `ABSTRACT • ${routed?.image?.source || "generated / fallback"}`,
+    {
+      x: 7.15,
+      y: 6.16,
+      w: 5.25,
+      h: 0.18,
+      fontFace: "Aptos",
+      fontSize: 8,
+      color: factual ? "1D4ED8" : "7E22CE",
+      fit: "shrink"
+    }
+  );
+
+  slide.addText(`O‘qituvchi AI • ${idx}/${total}`, {
+    x: 0.55,
+    y: 7.05,
+    w: 12.2,
+    h: 0.25,
+    fontFace: "Aptos",
+    fontSize: 9,
+    color: "64748B",
+    align: "right"
+  });
+}
+
+async function createPresentation(slides, title) {
+  const pptx = new PptxGenJS();
+
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.author = "O‘qituvchi AI";
+  pptx.subject = "Hybrid PPTX Image Router";
+  pptx.title = title || "Generated Presentation";
+  pptx.company = "O‘qituvchi AI";
+  pptx.lang = "uz-UZ";
+  pptx.theme = {
+    headFontFace: "Aptos Display",
+    bodyFontFace: "Aptos",
+    lang: "uz-UZ"
+  };
+
+  addCover(pptx, slides, title);
+
+  for (let i = 0; i < slides.length; i++) {
+    const slideData = slides[i];
+    const routed = await resolveImage(slideData);
+    const slide = pptx.addSlide();
+    addContent(slide, slideData, routed, i + 1, slides.length);
+  }
+
+  const buffer = await pptx.write({ outputType: "nodebuffer" });
+  return buffer;
+}
