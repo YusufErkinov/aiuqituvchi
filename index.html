@@ -923,7 +923,11 @@
       background:rgba(80,120,180,.35);
       border-radius:20px;
     }
-
+  .btn.pptx{
+  background:linear-gradient(135deg,#d24726,#f05a28);
+  color:white;
+  box-shadow:0 14px 34px rgba(210,71,38,.28);
+}
   </style>
 </head>
 <body>
@@ -1229,7 +1233,7 @@
                         Donabay tarif’da yuklab olish yopiq. Standard’da har fayl 1 000 so‘m, Pro’da 39 000 so‘mga 100 ta fayl.
                       </div>
                       <div class="form-actions">
-                        <button class="btn" type="button" onclick="handleExport()">Word yuklab olish</button>
+                        <button class="btn" type="button" id="exportBtn" onclick="handleExport()">Fayl yuklab olish</button>
                         <button class="btn soft" type="button" onclick="downloadCurrentTxt()">TXT yuklab olish</button>
                         <button class="btn soft" type="button" onclick="toast('Tahrirlash rejimi keyingi versiyada')">Tahrirlash</button>
                       </div>
@@ -1999,9 +2003,42 @@
   const outputBody = document.getElementById('outputBody');
   const outputList = document.getElementById('outputList');
 
-  if(outputBody && typeof buildRichHtmlContent === "function"){
+ if(outputBody){
+  if(type.toLowerCase().includes('taqdimot')){
+    let slideCount = 0;
+    let title = topic;
+
+    try{
+      const pptData = JSON.parse(content);
+      slideCount = Array.isArray(pptData.slides) ? pptData.slides.length : 0;
+      title = pptData.presentationTitle || topic;
+    }catch(err){
+      slideCount = 0;
+    }
+
+    outputBody.innerHTML = `
+      <div class="rich-output">
+        <p><b>AI taqdimot tayyor.</b></p>
+        <p><b>Mavzu:</b> ${escapeHtml(title)}</p>
+        <p><b>Slaydlar soni:</b> ${slideCount || 'tayyor'}</p>
+        <p>PowerPoint faylni yuklab olish uchun pastdagi tugmani bosing.</p>
+      </div>
+    `;
+  } else {
     outputBody.innerHTML = buildRichHtmlContent(content, type);
-  } else if(outputList){
+  }
+} 
+ const exportBtn = document.getElementById('exportBtn');
+
+if(exportBtn){
+  if(type.toLowerCase().includes('taqdimot')){
+    exportBtn.textContent = 'PPTX yuklab olish';
+    exportBtn.classList.add('pptx');
+  } else {
+    exportBtn.textContent = 'Word yuklab olish';
+    exportBtn.classList.remove('pptx');
+  }
+}else if(outputList){
     outputList.innerHTML = '';
 
     items.forEach(item => {
@@ -2010,6 +2047,16 @@
       outputList.appendChild(li);
     });
   }
+      else if(outputList){
+    outputList.innerHTML = '';
+
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      outputList.appendChild(li);
+    });
+  }
+
 
   updateUsageUI();
   renderDocuments();
@@ -2744,7 +2791,8 @@ function addVisualCard(slide, pptx, visual){
             .options{margin-top:8px; padding-left:14px}
             .options div{margin:4px 0}
             .answer-key{margin-top:8px;font-weight:700}
-          </style>
+            
+          <>
         </head>
         <body>
           <h2>${escapeHtml(doc.title)}</h2>
@@ -2945,7 +2993,14 @@ function addVisualCard(slide, pptx, visual){
       trackEvent("logout_click");
       toast('Profildan chiqildi');
     }
-
+    function escapeHtml(text){
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
     function toast(text){
       const t = document.getElementById('toast');
       t.textContent = text;
