@@ -1408,6 +1408,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <script>
     /************************************************************
      * SUPABASE SOZLAMALARI
@@ -2289,12 +2290,401 @@
     }
 
     function handleExport(){
+      if(currentDoc && currentDoc.type.toLowerCase().includes('taqdimot')){
+        downloadPresentationPptx();
+        return;
+      }
       if(!currentDoc){
         toast('Avval hujjat yarating');
         return;
       }
+      async function downloadPresentationPptx(){
+  if(!currentDoc){
+    toast("Avval taqdimot yarating.");
+    return;
+  }
+
+  if(!window.pptxgen){
+    toast("PPTX kutubxonasi yuklanmadi.");
+    return;
+  }
+
+  let data;
+
+  try{
+    data = JSON.parse(currentDoc.content);
+  }catch(err){
+    toast("AI taqdimot JSON formatda kelmadi.");
+    console.error(err);
+    return;
+  }
+
+  const pptx = new pptxgen();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.author = "O‘qituvchi AI";
+  pptx.subject = data.subject || currentDoc.subject || "";
+  pptx.title = data.presentationTitle || currentDoc.topic || "Taqdimot";
+
+  const slides = Array.isArray(data.slides) ? data.slides : [];
+
+  slides.forEach((s, index) => {
+    if(s.type === "title"){
+      addAiTitleSlide(pptx, s, data);
+    } else if(s.type === "comparison"){
+      addAiComparisonSlide(pptx, s, index + 1);
+    } else if(s.type === "process"){
+      addAiProcessSlide(pptx, s, index + 1);
+    } else if(s.type === "example"){
+      addAiExampleSlide(pptx, s, index + 1);
+    } else if(s.type === "activity"){
+      addAiActivitySlide(pptx, s, index + 1);
+    } else if(s.type === "summary"){
+      addAiSummarySlide(pptx, s, index + 1);
+    } else {
+      addAiContentSlide(pptx, s, index + 1);
+    }
+  });
+
+  const fileName = safeFileName(data.presentationTitle || currentDoc.title || "taqdimot") + ".pptx";
+  await pptx.writeFile({ fileName });
+
+  toast("PPTX fayl yuklandi.");
+}
       downloadDoc(currentDoc.id, 'doc');
     }
+    const PPT = {
+  dark: "07101D",
+  light: "F8FBFF",
+  primary: "5B7CFF",
+  accent: "22D3EE",
+  text: "10213D",
+  soft: "607086",
+  white: "FFFFFF"
+};
+
+function addAiHeader(slide, pptx, num){
+  slide.addShape(pptx.ShapeType.rect, {
+    x: 0, y: 0, w: 13.33, h: 0.72,
+    fill: { color: PPT.dark },
+    line: { color: PPT.dark }
+  });
+
+  slide.addText("O‘qituvchi AI", {
+    x: 0.55, y: 0.21, w: 3, h: 0.3,
+    fontFace: "Arial", fontSize: 12,
+    color: PPT.white, bold: true
+  });
+
+  slide.addText(String(num).padStart(2, "0"), {
+    x: 11.8, y: 0.18, w: 0.9, h: 0.3,
+    fontFace: "Arial", fontSize: 13,
+    color: PPT.accent, bold: true,
+    align: "right"
+  });
+}
+
+function addAiTitleSlide(pptx, s, data){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.dark };
+
+  slide.addText("O‘qituvchi AI", {
+    x: 0.7, y: 0.55, w: 4, h: 0.4,
+    fontFace: "Arial", fontSize: 17,
+    color: "A8B5CB", bold: true
+  });
+
+  slide.addText(s.title || data.presentationTitle || "Taqdimot", {
+    x: 0.7, y: 1.7, w: 8.6, h: 1.3,
+    fontFace: "Arial", fontSize: 42,
+    color: PPT.white, bold: true,
+    fit: "shrink"
+  });
+
+  slide.addText(s.subtitle || "", {
+    x: 0.75, y: 3.25, w: 6, h: 0.5,
+    fontFace: "Arial", fontSize: 20,
+    color: "DCE8FB"
+  });
+
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 9.4, y: 1.45, w: 2.8, h: 2.8,
+    rectRadius: 0.18,
+    fill: { color: PPT.primary },
+    line: { color: PPT.accent }
+  });
+
+  slide.addText("AI", {
+    x: 9.8, y: 2.08, w: 2, h: 1,
+    fontFace: "Arial", fontSize: 50,
+    color: PPT.white, bold: true,
+    align: "center"
+  });
+}
+
+function addAiContentSlide(pptx, s, num){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.light };
+  addAiHeader(slide, pptx, num);
+
+  slide.addText(s.title || "Slayd", {
+    x: 0.7, y: 1.12, w: 10.5, h: 0.6,
+    fontFace: "Arial", fontSize: 31,
+    color: PPT.text, bold: true,
+    fit: "shrink"
+  });
+
+  const bullets = (s.bullets || []).slice(0, 5).map(t => ({
+    text: t,
+    options: { bullet: { type: "ul" } }
+  }));
+
+  slide.addText(bullets, {
+    x: 0.95, y: 2.05, w: 7.4, h: 4.4,
+    fontFace: "Arial", fontSize: 20,
+    color: "26364D",
+    breakLine: true,
+    paraSpaceAfterPt: 12,
+    fit: "shrink"
+  });
+
+  addVisualCard(slide, pptx, s.visual || "concept_icon");
+}
+
+function addAiComparisonSlide(pptx, s, num){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.light };
+  addAiHeader(slide, pptx, num);
+
+  slide.addText(s.title || "Taqqoslash", {
+    x: 0.7, y: 1.05, w: 11, h: 0.6,
+    fontFace: "Arial", fontSize: 30,
+    color: PPT.text, bold: true
+  });
+
+  addCompareBox(slide, pptx, 0.85, 2.05, s.leftTitle, s.leftPoints, PPT.primary);
+  addCompareBox(slide, pptx, 6.85, 2.05, s.rightTitle, s.rightPoints, PPT.accent);
+}
+
+function addCompareBox(slide, pptx, x, y, title, points, color){
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x, y, w: 5.25, h: 3.9,
+    rectRadius: 0.16,
+    fill: { color: "FFFFFF" },
+    line: { color }
+  });
+
+  slide.addText(title || "Bo‘lim", {
+    x: x + 0.3, y: y + 0.25, w: 4.5, h: 0.4,
+    fontFace: "Arial", fontSize: 22,
+    bold: true,
+    color
+  });
+
+  const bullets = (points || []).slice(0, 4).map(t => ({
+    text: t,
+    options: { bullet: { type: "ul" } }
+  }));
+
+  slide.addText(bullets, {
+    x: x + 0.45, y: y + 1.05, w: 4.3, h: 2.5,
+    fontFace: "Arial", fontSize: 16,
+    color: "26364D",
+    breakLine: true,
+    paraSpaceAfterPt: 8
+  });
+}
+
+function addAiProcessSlide(pptx, s, num){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.light };
+  addAiHeader(slide, pptx, num);
+
+  slide.addText(s.title || "Jarayon", {
+    x: 0.7, y: 1.05, w: 11, h: 0.6,
+    fontFace: "Arial", fontSize: 30,
+    color: PPT.text, bold: true
+  });
+
+  const steps = (s.steps || []).slice(0, 5);
+  steps.forEach((step, i) => {
+    const x = 0.85 + i * 2.45;
+    slide.addShape(pptx.ShapeType.ellipse, {
+      x, y: 2.4, w: 0.75, h: 0.75,
+      fill: { color: PPT.primary },
+      line: { color: PPT.primary }
+    });
+
+    slide.addText(String(i + 1), {
+      x, y: 2.57, w: 0.75, h: 0.3,
+      fontSize: 15, bold: true,
+      color: PPT.white,
+      align: "center"
+    });
+
+    slide.addText(step, {
+      x: x - 0.25, y: 3.35, w: 1.5, h: 1.2,
+      fontSize: 15,
+      color: PPT.text,
+      align: "center",
+      fit: "shrink"
+    });
+
+    if(i < steps.length - 1){
+      slide.addShape(pptx.ShapeType.line, {
+        x: x + 0.82, y: 2.78, w: 1.25, h: 0,
+        line: { color: PPT.accent, width: 2, beginArrowType: "none", endArrowType: "triangle" }
+      });
+    }
+  });
+}
+
+function addAiExampleSlide(pptx, s, num){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.light };
+  addAiHeader(slide, pptx, num);
+
+  slide.addText(s.title || "Amaliy misol", {
+    x: 0.7, y: 1.05, w: 11, h: 0.6,
+    fontFace: "Arial", fontSize: 30,
+    color: PPT.text, bold: true
+  });
+
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.85, y: 2.0, w: 5.4, h: 3.8,
+    rectRadius: 0.16,
+    fill: { color: "FFFFFF" },
+    line: { color: "D7E8FB" }
+  });
+
+  slide.addText(s.exampleTitle || "Misol", {
+    x: 1.15, y: 2.3, w: 4.8, h: 0.4,
+    fontSize: 22,
+    bold: true,
+    color: PPT.primary
+  });
+
+  slide.addText(s.exampleText || "", {
+    x: 1.15, y: 2.95, w: 4.65, h: 1.5,
+    fontSize: 17,
+    color: PPT.text,
+    fit: "shrink"
+  });
+
+  const steps = (s.solutionSteps || []).slice(0, 4).map(t => ({
+    text: t,
+    options: { bullet: { type: "ul" } }
+  }));
+
+  slide.addText(steps, {
+    x: 7.0, y: 2.1, w: 5.0, h: 3.8,
+    fontSize: 18,
+    color: "26364D",
+    breakLine: true,
+    paraSpaceAfterPt: 10
+  });
+}
+
+function addAiActivitySlide(pptx, s, num){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.dark };
+
+  slide.addText(s.title || "Interaktiv topshiriq", {
+    x: 0.75, y: 0.9, w: 11.5, h: 0.8,
+    fontSize: 34,
+    bold: true,
+    color: PPT.white
+  });
+
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 0.9, y: 2.05, w: 11.5, h: 3.8,
+    rectRadius: 0.18,
+    fill: { color: "FFFFFF", transparency: 5 },
+    line: { color: PPT.accent }
+  });
+
+  slide.addText(s.task || "Topshiriq", {
+    x: 1.25, y: 2.35, w: 10.6, h: 0.7,
+    fontSize: 21,
+    bold: true,
+    color: PPT.text
+  });
+
+  const inst = (s.instructions || []).slice(0, 4).map(t => ({
+    text: t,
+    options: { bullet: { type: "ul" } }
+  }));
+
+  slide.addText(inst, {
+    x: 1.35, y: 3.25, w: 10.2, h: 2.1,
+    fontSize: 18,
+    color: "26364D",
+    breakLine: true
+  });
+}
+
+function addAiSummarySlide(pptx, s, num){
+  const slide = pptx.addSlide();
+  slide.background = { color: PPT.dark };
+
+  slide.addText(s.title || "Xulosa", {
+    x: 0.8, y: 0.9, w: 11, h: 0.8,
+    fontSize: 36,
+    bold: true,
+    color: PPT.white
+  });
+
+  const bullets = (s.bullets || []).slice(0, 5);
+
+  bullets.forEach((b, i) => {
+    slide.addShape(pptx.ShapeType.roundRect, {
+      x: 0.9, y: 2.0 + i * 0.82, w: 11.3, h: 0.58,
+      rectRadius: 0.14,
+      fill: { color: "FFFFFF", transparency: 8 },
+      line: { color: PPT.primary, transparency: 25 }
+    });
+
+    slide.addText("✓ " + b, {
+      x: 1.15, y: 2.11 + i * 0.82, w: 10.7, h: 0.35,
+      fontSize: 18,
+      color: PPT.white,
+      bold: true
+    });
+  });
+}
+
+function addVisualCard(slide, pptx, visual){
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: 9.0, y: 2.05, w: 3.35, h: 3.2,
+    rectRadius: 0.18,
+    fill: { color: "EAF1FF" },
+    line: { color: "D7E8FB" }
+  });
+
+  slide.addText("Vizual", {
+    x: 9.25, y: 2.35, w: 2.8, h: 0.4,
+    fontSize: 16,
+    color: PPT.primary,
+    bold: true
+  });
+
+  slide.addText(visual || "diagram", {
+    x: 9.25, y: 2.95, w: 2.8, h: 0.5,
+    fontSize: 14,
+    color: PPT.soft
+  });
+
+  slide.addShape(pptx.ShapeType.hexagon, {
+    x: 10.15, y: 3.75, w: 1.2, h: 1.1,
+    fill: { color: PPT.primary, transparency: 10 },
+    line: { color: PPT.accent }
+  });
+}
+    function safeFileName(name){
+  return String(name || 'fayl')
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 80);
+}
 
     async function downloadDoc(id, format){
       const doc = documents.find(d => d.id === id);
