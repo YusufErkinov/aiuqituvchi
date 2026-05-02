@@ -1608,36 +1608,66 @@ function addVisualCard(slide, pptx, visual){
 async function downloadHybridPptx(){
   const title = document.getElementById('topic')?.value || "O‘qituvchi AI taqdimoti";
 
-  const slides = [
-    {
-      title: "Ona plata",
-      body: "Ona plata kompyuterning asosiy platasi bo‘lib, protsessor, RAM va boshqa qurilmalarni bog‘laydi.",
-      bullets: [
-        "Kompyuter komponentlarini ulaydi",
-        "Protsessor va RAM shu plataga o‘rnatiladi",
-        "Portlar va chipset orqali boshqaruvni ta’minlaydi"
-      ]
-    },
-    {
-      title: "RAM xotira",
-      body: "RAM vaqtinchalik xotira bo‘lib, kompyuter ishlayotgan paytda dasturlar va ma’lumotlarni tezkor saqlaydi.",
-      bullets: [
-        "Tezkor ishlashga yordam beradi",
-        "Kompyuter o‘chirilganda ma’lumotlar yo‘qoladi",
-        "Hajmi katta bo‘lsa, ko‘proq dastur qulay ishlaydi"
-      ]
-    },
-    {
-      title: "Kiberxavfsizlik",
-      body: "Kiberxavfsizlik axborot tizimlari va foydalanuvchilarni raqamli tahdidlardan himoya qilishga qaratilgan.",
-      bullets: [
-        "Parollarni himoyalash",
-        "Zararli dasturlardan saqlanish",
-        "Shaxsiy ma’lumotlarni xavfsiz saqlash"
-      ]
-    }
-  ];
+  async function downloadHybridPptx(){
+  const subject = document.getElementById('genSubject')?.value || 'Informatika';
+  const grade = document.getElementById('genGrade')?.value || '7-sinf';
+  const topic = document.getElementById('topic')?.value?.trim() || 'Mavzu kiritilmagan';
 
+  const btn = document.getElementById('pptxBtn');
+  const oldText = btn ? btn.textContent : '';
+
+  try{
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = 'PPTX tayyorlanmoqda...';
+    }
+
+    toast("AI taqdimot tayyorlamoqda...");
+
+    const response = await fetch("/api/generate-pptx", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        title: `${subject} - ${topic}`,
+        subject,
+        grade,
+        topic,
+        slidesCount: 7
+      })
+    });
+
+    if(!response.ok){
+      const text = await response.text();
+      console.error("PPTX API error:", text);
+      toast("PPTX yaratishda xatolik bo‘ldi.");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${subject}-${topic}`.replace(/[^\p{L}\p{N}]+/gu, "-") + ".pptx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+    toast("PPTX yuklab olindi.");
+  }catch(err){
+    console.error(err);
+    toast("PPTX serveriga ulanishda xatolik.");
+  }finally{
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = oldText || 'PPTX yaratish';
+    }
+  }
+}
   try{
     toast("PPTX tayyorlanmoqda...");
 
