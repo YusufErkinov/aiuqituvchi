@@ -2314,10 +2314,12 @@
     return;
   }
 
-  if(!window.pptxgen){
-    toast("PPTX kutubxonasi yuklanmadi.");
-    return;
-  }
+  const PptxLib = window.PptxGenJS;
+
+if(!PptxLib){
+  toast("PPTX kutubxonasi yuklanmadi.");
+  return;
+}
 
   let data;
 
@@ -2329,7 +2331,7 @@
     return;
   }
 
-  const pptx = new pptxgen();
+  const pptx = new PptxLib();
   pptx.layout = "LAYOUT_WIDE";
   pptx.author = "O‘qituvchi AI";
   pptx.subject = data.subject || currentDoc.subject || "";
