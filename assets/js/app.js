@@ -1605,3 +1605,75 @@ function addVisualCard(slide, pptx, visual){
     syncProfileUI();
     protectResultCopy();
     updateAuthUI();
+async function downloadHybridPptx(){
+  const title = document.getElementById('topic')?.value || "O‘qituvchi AI taqdimoti";
+
+  const slides = [
+    {
+      title: "Ona plata",
+      body: "Ona plata kompyuterning asosiy platasi bo‘lib, protsessor, RAM va boshqa qurilmalarni bog‘laydi.",
+      bullets: [
+        "Kompyuter komponentlarini ulaydi",
+        "Protsessor va RAM shu plataga o‘rnatiladi",
+        "Portlar va chipset orqali boshqaruvni ta’minlaydi"
+      ]
+    },
+    {
+      title: "RAM xotira",
+      body: "RAM vaqtinchalik xotira bo‘lib, kompyuter ishlayotgan paytda dasturlar va ma’lumotlarni tezkor saqlaydi.",
+      bullets: [
+        "Tezkor ishlashga yordam beradi",
+        "Kompyuter o‘chirilganda ma’lumotlar yo‘qoladi",
+        "Hajmi katta bo‘lsa, ko‘proq dastur qulay ishlaydi"
+      ]
+    },
+    {
+      title: "Kiberxavfsizlik",
+      body: "Kiberxavfsizlik axborot tizimlari va foydalanuvchilarni raqamli tahdidlardan himoya qilishga qaratilgan.",
+      bullets: [
+        "Parollarni himoyalash",
+        "Zararli dasturlardan saqlanish",
+        "Shaxsiy ma’lumotlarni xavfsiz saqlash"
+      ]
+    }
+  ];
+
+  try{
+    toast("PPTX tayyorlanmoqda...");
+
+    const response = await fetch("/api/generate-pptx", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        title,
+        slides
+      })
+    });
+
+    if(!response.ok){
+      const text = await response.text();
+      console.error("PPTX API error:", text);
+      toast("PPTX yaratishda xatolik bo‘ldi.");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "taqdimot.pptx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+    toast("PPTX yuklab olindi.");
+  }catch(err){
+    console.error(err);
+    toast("PPTX serveriga ulanishda xatolik.");
+  }
+}
