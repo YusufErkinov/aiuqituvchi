@@ -1606,9 +1606,6 @@ function addVisualCard(slide, pptx, visual){
     protectResultCopy();
     updateAuthUI();
 async function downloadHybridPptx(){
-  const title = document.getElementById('topic')?.value || "O‘qituvchi AI taqdimoti";
-
-  async function downloadHybridPptx(){
   const subject = document.getElementById('genSubject')?.value || 'Informatika';
   const grade = document.getElementById('genGrade')?.value || '7-sinf';
   const topic = document.getElementById('topic')?.value?.trim() || 'Mavzu kiritilmagan';
@@ -1631,9 +1628,9 @@ async function downloadHybridPptx(){
       },
       body: JSON.stringify({
         title: `${subject} - ${topic}`,
-        subject,
-        grade,
-        topic,
+        subject: subject,
+        grade: grade,
+        topic: topic,
         slidesCount: 7
       })
     });
@@ -1648,9 +1645,14 @@ async function downloadHybridPptx(){
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 
+    const fileName = `${subject}-${topic}`
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase();
+
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${subject}-${topic}`.replace(/[^\p{L}\p{N}]+/gu, "-") + ".pptx";
+    a.download = fileName + ".pptx";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1666,44 +1668,5 @@ async function downloadHybridPptx(){
       btn.disabled = false;
       btn.textContent = oldText || 'PPTX yaratish';
     }
-  }
-}
-  try{
-    toast("PPTX tayyorlanmoqda...");
-
-    const response = await fetch("/api/generate-pptx", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        title,
-        slides
-      })
-    });
-
-    if(!response.ok){
-      const text = await response.text();
-      console.error("PPTX API error:", text);
-      toast("PPTX yaratishda xatolik bo‘ldi.");
-      return;
-    }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "taqdimot.pptx";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    URL.revokeObjectURL(url);
-
-    toast("PPTX yuklab olindi.");
-  }catch(err){
-    console.error(err);
-    toast("PPTX serveriga ulanishda xatolik.");
   }
 }
