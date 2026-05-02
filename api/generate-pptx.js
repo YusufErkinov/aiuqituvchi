@@ -69,7 +69,42 @@ Rules:
 - Physical object/device = prefer FACTUAL.
 - Concept/workflow/future idea = prefer ABSTRACT.
 `;
+const SLIDE_PLAN_SYSTEM_PROMPT = `
+You are an expert Uzbek presentation planner for school teachers.
 
+Task:
+Create a concise presentation outline in Uzbek based on:
+- subject
+- grade
+- topic
+
+Return ONLY valid JSON.
+No markdown.
+No explanation.
+
+Rules:
+- Return 5 to 8 content slides.
+- Do NOT create a cover/title slide. The cover is already generated separately.
+- Each slide must have:
+  - title
+  - body
+  - bullets (2 to 5 items)
+- Use simple, school-friendly Uzbek language.
+- Make the presentation clear and educational.
+- Avoid repeating the same point across slides.
+- Keep text presentation-friendly, not too long.
+
+JSON schema:
+{
+  "slides": [
+    {
+      "title": "string",
+      "body": "string",
+      "bullets": ["string", "string", "string"]
+    }
+  ]
+}
+`;
 const defaultSlides = [
   {
     title: "Ona plata",
@@ -96,8 +131,24 @@ export default async function handler(req, res) {
 
   try {
     const body = parseBody(req.body);
-    const slides = normalizeSlides(body.slides || defaultSlides);
-    const title = body.title || "O‘qituvchi AI taqdimoti";
+    const title =
+  body.title ||
+  `${body.subject || "Fan"} - ${body.topic || "Taqdimot"}`;
+
+let slides = normalizeSlides(body.slides || []);
+
+if (!slides.length) {
+  if (body.topic) {
+    slides = await generateSlidesFromTopic({
+      subject: body.subject,
+      grade: body.grade,
+      topic: body.topic,
+      slidesCount: body.slidesCount || 7
+    });
+  } else {
+    slides = defaultSlides;
+  }
+}
 
     if (!slides.length) {
       return res.status(400).json({ ok: false, error: "slides ro‘yxati bo‘sh" });
@@ -310,7 +361,84 @@ async function callGeminiClassifier(payload) {
 
   throw new Error("All Gemini classifier models failed: " + lastError);
 }
+async function callGeminiJson(systemPrompt, payload) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY missing");
 
+  const models = unique([
+    process.env.GEMINI_MODEL,
+    process.env.GEMINI_TEXT_MODEL,
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash"
+  ]);
+
+  let lastError = "";
+
+  for (const model of models) {
+    try {
+      const url =
+        "https://generativelanguage.googleapis.com/v1beta/models/" +
+        model +
+        ":generateContent?key=" +
+        apiKey;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: systemPrompt }]
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: JSON.stringify(payload) }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.3,
+            topP: 0.9,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = `${model}: ${errorText}`;
+
+        if (response.status === 429 || response.status === 503) {
+          await sleep(700);
+          continue;
+        }
+
+        throw new Error(lastError);
+      }
+
+      const data = await response.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } catch (err) {
+      lastError = err.message;
+
+      if (
+        String(err.message).includes("429") ||
+        String(err.message).includes("503") ||
+        String(err.message).includes("UNAVAILABLE") ||
+        String(err.message).includes("RESOURCE_EXHAUSTED")
+      ) {
+        await sleep(700);
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  throw new Error("All Gemini JSON models failed: " + lastError);
+}
 async function classifySlide(slide) {
   const payload = {
     slide_title: slide.title || "",
@@ -336,7 +464,25 @@ async function classifySlide(slide) {
     return heuristicRoute(slide);
   }
 }
+async function generateSlidesFromTopic({ subject, grade, topic, slidesCount = 7 }) {
+  const payload = {
+    subject: subject || "Informatika",
+    grade: grade || "7-sinf",
+    topic: topic || "Mavzu kiritilmagan",
+    slides_count: slidesCount
+  };
 
+  const raw = await callGeminiJson(SLIDE_PLAN_SYSTEM_PROMPT, payload);
+  const parsed = safeJsonParse(raw);
+
+  const slides = normalizeSlides(parsed?.slides || []);
+
+  if (!slides.length) {
+    throw new Error("AI slide plan bo‘sh qaytdi");
+  }
+
+  return slides;
+}
 async function downloadTemp(url, ext = "jpg") {
   const response = await fetch(url);
 
