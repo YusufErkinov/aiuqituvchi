@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>O‘qituvchi AI — Test Sayt</title>
+  <title>O'qituvchi AI</title>
   <link rel="stylesheet" href="./assets/css/style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <nav class="nav">
         <div class="brand" onclick="showPage('home')">
           <div class="brand-mark">AI</div>
-          <span>O‘qituvchi AI <small>Test sayt prototipi</small></span>
+          <span>O'qituvchi AI</span>
         </div>
         <button class="btn soft mobile-menu" onclick="toggleMenu()">Menyu</button>
         <div class="nav-links" id="navLinks">
@@ -31,17 +31,17 @@
           <div class="hero-grid">
             <div>
               <span class="badge"><span class="dot"></span> Donabay tarif: har bir fayl 1 000 so‘m</span>
-              <h1>O‘qituvchilar uchun <span class="grad">AI yordamchi</span> test sayti</h1>
-              <p class="lead">Endi platformada free trial reklama qilinmaydi. Asosiy taklif — Donabay tarif: har bir faylni yuklab olish 1 000 so‘m, eng kam hisob to‘ldirish 5 000 so‘m. Ko‘p ishlatadiganlar uchun Pro: 39 000 so‘mga 100 ta fayl.</p>
+              <h1>O'qituvchilar uchun <span class="grad">AI yordamchi</span></h1>
+              <p class="lead">O'zbekiston DTS formatida dars ishlanma, test va hisobotlarni 60 soniyada tayyor qiling. Har bir fayl 1 000 so'm — prompt yozish shart emas.</p>
               <div class="hero-actions">
                 <button class="btn" data-auth="primary" onclick="showPage('signup')">Ro‘yxatdan o‘tish</button>
                 <button class="btn soft" data-auth="cabinet" onclick="showPage('dashboard')">Shaxsiy kabinet</button>
               </div>
               <div class="proofs">
-                <div class="proof"><b>1 000</b><span>so‘m / 1 fayl</span></div>
-                <div class="proof"><b>5 000</b><span>so‘m minimal to‘ldirish</span></div>
-                <div class="proof"><b>39 000</b><span>so‘m / 100 fayl Pro</span></div>
-              </div>
+  <div class="proof"><b>1 000</b><span>so'm / 1 fayl</span></div>
+  <div class="proof"><b>60 sek</b><span>hujjat tayyor bo'ladi</span></div>
+  <div class="proof"><b>50+</b><span>o'qituvchi ishlatmoqda</span></div>
+</div>
             </div>
             <div class="mock-window">
               <div class="app-preview">
@@ -81,8 +81,8 @@
 
           <section class="section">
             <div class="section-head">
-              <h2>Test sayt ichida nimalar bor?</h2>
-              <p>Bu prototip foydalanuvchini real mahsulot kabi his qildiradi: signup, shaxsiy tahlil, dashboard va AI generator demo.</p>
+              <h2>Nima qilishingiz mumkin?</h2>
+<p>Ro'yxatdan o'ting, fan va mavzuni tanlang — AI 60 soniyada tayyor hujjat chiqaradi.</p>
             </div>
             <div class="grid g3">
               <div class="card-dark"><div class="icon">📝</div><h3>Ro‘yxatdan o‘tish</h3><p>Foydalanuvchi ism, telefon, fan, sinf va ehtiyojini kiritadi.</p></div>
@@ -109,8 +109,8 @@
           </div>
 
           <div class="auth-card">
-            <h2>Ro‘yxatdan o‘tish</h2>
-            <p>Test demo uchun ma’lumot kiriting. Bu prototipda real serverga yuborilmaydi.</p>
+            <h2>Ro'yxatdan o'tish</h2>
+<p>Ma'lumotlaringiz xavfsiz. Ro'yxatdan o'tgach kabinet ochiladi.</p>
             <form id="signupForm">
               <div class="form-grid">
                 <div class="field">
@@ -356,34 +356,26 @@
                   </div>
                   <div>
                     <div class="form-grid">
-                      <div class="field">
-                        <label>Ism-familya</label>
-                        <input id="editName" value="Yusuf Erkinov">
-                      </div>
-                      <div class="field">
-                        <label>Telefon</label>
-                        <input id="editPhone" value="+998 90 123 45 67">
-                      </div>
-                      <div class="field">
-                        <label>Fan</label>
-                        <select id="editSubject">
-                          <option>Informatika</option>
-                          <option>Matematika</option>
-                          <option>Ona tili</option>
-                          <option>Ingliz tili</option>
-                          <option>Tarix</option>
-                        </select>
-                      </div>
-                      <div class="field">
-                        <label>Sinf</label>
-                        <select id="editGrade">
-                          <option>7–9-sinflar</option>
-                          <option>5–7-sinflar</option>
-                          <option>10–11-sinflar</option>
-                          <option>Boshlang‘ich sinf</option>
-                        </select>
-                      </div>
-                    </div>
+  <div class="field">
+    <label>Ism-familya</label>
+    <input required id="fullName" placeholder="Masalan: Yusuf Erkinov">
+  </div>
+  <div class="field">
+    <label>Telefon raqam</label>
+    <input required id="phone" placeholder="+998 90 123 45 67">
+  </div>
+  <div class="field">
+    <label>Fan</label>
+    <select id="subject">
+      <option>Informatika</option>
+      <option>Matematika</option>
+      <option>Ona tili</option>
+      <option>Ingliz tili</option>
+      <option>Tarix</option>
+      <option>Boshlang'ich ta'lim</option>
+    </select>
+  </div>
+</div>
                     <div class="field">
                       <label>Asosiy ehtiyoj</label>
                       <select id="editNeed">
