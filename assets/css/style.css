@@ -58,6 +58,12 @@
       letter-spacing:-.03em;
       cursor:pointer;
     }
+ .brand img {
+  height: 36px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+ }
     .brand-mark{
       width:44px;height:44px;border-radius:16px;
       display:grid;place-items:center;
