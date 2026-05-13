@@ -1114,129 +1114,6 @@ function addContent(slide, data, routed, idx, total) {
 //   const buffer = await pptx.write({ outputType: "nodebuffer" });
 //   return buffer;
 // }
-// const THEMES = [
-//   { bg: "0F172A", accent: "0EA5E9", accent2: "38BDF8", text: "FFFFFF", sub: "94A3B8", card: "1E293B" },
-//   { bg: "0D1F12", accent: "22C55E", accent2: "86EFAC", text: "FFFFFF", sub: "86EFAC", card: "14532D" },
-//   { bg: "1A0A2E", accent: "A855F7", accent2: "D8B4FE", text: "FFFFFF", sub: "C4B5FD", card: "2D1B69" },
-//   { bg: "1C0A00", accent: "F97316", accent2: "FED7AA", text: "FFFFFF", sub: "FED7AA", card: "431407" },
-//   { bg: "0A1628", accent: "06B6D4", accent2: "67E8F9", text: "FFFFFF", sub: "A5F3FC", card: "164E63" },
-// ];
-// function getTheme(i) { return THEMES[i % THEMES.length]; }
-
-// function addCoverSlide(pres, title, subject, grade) {
-//   const T = THEMES[0]; const s = pres.addSlide(); s.background = { color: T.bg };
-//   s.addShape(pres.shapes.RECTANGLE, { x: 8.8, y: 0, w: 4.53, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 8.8, y: 0, w: 0.15, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addShape(pres.shapes.OVAL, { x: 9.6, y: 0.4, w: 2.8, h: 2.8, fill: { color: T.accent, transparency: 85 }, line: { color: T.accent, transparency: 70 } });
-//   s.addShape(pres.shapes.OVAL, { x: 10.5, y: 3.8, w: 1.8, h: 1.8, fill: { color: T.accent2, transparency: 80 }, line: { color: T.accent2, transparency: 60 } });
-//   s.addText("TAQDIMOT", { x: 8.95, y: 0.5, w: 4.2, h: 0.45, fontSize: 11, color: T.accent, bold: true, charSpacing: 4, align: "center" });
-//   s.addText(subject || "Fan", { x: 8.95, y: 1.1, w: 4.2, h: 0.45, fontSize: 14, color: T.text, align: "center" });
-//   s.addText(grade || "", { x: 8.95, y: 1.6, w: 4.2, h: 0.4, fontSize: 13, color: T.sub, align: "center" });
-//   s.addText(title, { x: 0.6, y: 1.8, w: 7.9, h: 3.2, fontSize: 44, color: T.text, bold: true, align: "left", valign: "middle" });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0.6, y: 6.1, w: 7.9, h: 0.07, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addText("O'qituvchi AI  ·  aiuqituvchi.vercel.app", { x: 0.6, y: 6.25, w: 7.9, h: 0.4, fontSize: 11, color: T.sub, align: "left" });
-// }
-
-// function addSideAccentSlide(pres, slide, themeIdx) {
-//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.6, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addText(String(themeIdx), { x: 0.05, y: 0.25, w: 0.5, h: 0.5, fontSize: 12, color: T.bg, bold: true, align: "center", valign: "middle" });
-//   s.addText(slide.title, { x: 0.9, y: 0.35, w: 12.0, h: 0.9, fontSize: 30, color: T.text, bold: true, align: "left" });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y: 1.35, w: 3.2, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-//   if (slide.body) s.addText(slide.body, { x: 0.9, y: 1.55, w: 12.0, h: 0.8, fontSize: 14, color: T.sub, align: "left" });
-//   (slide.bullets || []).slice(0, 4).forEach((b, i) => {
-//     const y = 2.55 + i * 1.1;
-//     s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 12.0, h: 0.92, fill: { color: T.card }, line: { color: T.accent, transparency: 70 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
-//     s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 0.07, h: 0.92, fill: { color: T.accent }, line: { color: T.accent } });
-//     s.addText(b, { x: 1.15, y: y + 0.05, w: 11.6, h: 0.82, fontSize: 14, color: T.text, align: "left", valign: "middle" });
-//   });
-// }
-
-// function addGridSlide(pres, slide, themeIdx) {
-//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.8, fill: { color: T.card }, line: { color: T.card } });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.78, w: 13.333, h: 0.05, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addText(slide.title, { x: 0.5, y: 0.1, w: 12.3, h: 0.6, fontSize: 22, color: T.text, bold: true, align: "left", valign: "middle" });
-//   if (slide.body) s.addText(slide.body, { x: 0.5, y: 0.95, w: 12.3, h: 0.55, fontSize: 13, color: T.sub, align: "left" });
-//   const bullets = slide.bullets || []; const cols = bullets.length <= 2 ? 2 : 3; const cardW = bullets.length <= 2 ? 6.0 : 3.9;
-//   bullets.slice(0, 6).forEach((b, i) => {
-//     const col = i % cols; const row = Math.floor(i / cols);
-//     const x = 0.45 + col * (cardW + 0.2); const y = 1.65 + row * 2.5;
-//     s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 2.2, fill: { color: T.card }, line: { color: T.accent, transparency: 75 }, shadow: { type: "outer", blur: 6, offset: 2, angle: 135, color: "000000", opacity: 0.18 } });
-//     s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 0.07, fill: { color: T.accent }, line: { color: T.accent } });
-//     s.addShape(pres.shapes.OVAL, { x: x + cardW - 0.68, y: y + 0.15, w: 0.48, h: 0.48, fill: { color: T.accent, transparency: 80 }, line: { color: T.accent, transparency: 60 } });
-//     s.addText(String(i + 1), { x: x + cardW - 0.68, y: y + 0.15, w: 0.48, h: 0.48, fontSize: 13, color: T.accent, bold: true, align: "center", valign: "middle" });
-//     s.addText(b, { x: x + 0.2, y: y + 0.25, w: cardW - 0.95, h: 1.8, fontSize: 13, color: T.text, align: "left", valign: "middle" });
-//   });
-// }
-
-// function addTwoColumnSlide(pres, slide, themeIdx) {
-//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
-//   s.addShape(pres.shapes.RECTANGLE, { x: 6.8, y: 0, w: 6.53, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.1, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addText(`0${themeIdx}`, { x: 6.9, y: 0.25, w: 6.2, h: 0.65, fontSize: 40, color: T.accent, bold: true, align: "right", transparency: 70 });
-//   s.addText(slide.title, { x: 0.5, y: 0.4, w: 6.0, h: 1.5, fontSize: 28, color: T.text, bold: true, align: "left", valign: "middle" });
-//   if (slide.body) s.addText(slide.body, { x: 0.5, y: 2.1, w: 6.0, h: 1.5, fontSize: 13, color: T.sub, align: "left" });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 6.8, w: 2.0, h: 0.07, fill: { color: T.accent }, line: { color: T.accent } });
-//   (slide.bullets || []).slice(0, 5).forEach((b, i) => {
-//     const y = 1.1 + i * 1.22;
-//     s.addShape(pres.shapes.RECTANGLE, { x: 7.0, y, w: 5.9, h: 1.02, fill: { color: T.bg }, line: { color: T.accent, transparency: 80 }, shadow: { type: "outer", blur: 4, offset: 1, angle: 135, color: "000000", opacity: 0.12 } });
-//     s.addText(`${i + 1}`, { x: 7.0, y, w: 0.7, h: 1.02, fontSize: 20, color: T.accent, bold: true, align: "center", valign: "middle" });
-//     s.addShape(pres.shapes.LINE, { x: 7.7, y: y + 0.2, w: 0, h: 0.62, line: { color: T.accent, width: 1, transparency: 60 } });
-//     s.addText(b, { x: 7.85, y: y + 0.06, w: 4.9, h: 0.9, fontSize: 13, color: T.text, align: "left", valign: "middle" });
-//   });
-// }
-
-// function addStatSlide(pres, slide, themeIdx) {
-//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
-//   s.addText(String(themeIdx).padStart(2, "0"), { x: 7.0, y: 0.5, w: 5.8, h: 6.0, fontSize: 220, color: T.card, bold: true, align: "center", valign: "middle" });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.12, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addText(slide.title, { x: 0.4, y: 0.5, w: 7.2, h: 1.2, fontSize: 32, color: T.text, bold: true, align: "left" });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 1.85, w: 2.6, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-//   if (slide.body) s.addText(slide.body, { x: 0.4, y: 2.1, w: 7.0, h: 1.0, fontSize: 14, color: T.sub, align: "left" });
-//   (slide.bullets || []).slice(0, 4).forEach((b, i) => {
-//     s.addText(`→  ${b}`, { x: 0.4, y: 3.3 + i * 0.95, w: 7.0, h: 0.8, fontSize: 14, color: T.text, align: "left" });
-//     s.addShape(pres.shapes.LINE, { x: 0.4, y: 3.3 + i * 0.95 + 0.8, w: 6.6, h: 0, line: { color: T.card, width: 1 } });
-//   });
-// }
-
-// function addSummarySlide(pres, slide) {
-//   const T = THEMES[0]; const s = pres.addSlide(); s.background = { color: T.bg };
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
-//   s.addShape(pres.shapes.OVAL, { x: 4.7, y: 0.8, w: 4.0, h: 4.0, fill: { color: T.accent, transparency: 92 }, line: { color: T.accent, transparency: 75 } });
-//   s.addShape(pres.shapes.OVAL, { x: 5.4, y: 1.5, w: 2.5, h: 2.5, fill: { color: T.accent, transparency: 85 }, line: { color: T.accent, transparency: 65 } });
-//   s.addText("XULOSA", { x: 0.6, y: 0.6, w: 12.1, h: 0.55, fontSize: 12, color: T.accent, bold: true, charSpacing: 4, align: "center" });
-//   s.addText(slide.title, { x: 0.6, y: 1.3, w: 12.1, h: 1.5, fontSize: 34, color: T.text, bold: true, align: "center", valign: "middle" });
-//   (slide.bullets || []).slice(0, 3).forEach((b, i) => {
-//     s.addShape(pres.shapes.RECTANGLE, { x: 1.5, y: 3.2 + i * 1.0, w: 10.3, h: 0.82, fill: { color: T.bg }, line: { color: T.accent, transparency: 70 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
-//     s.addText(`✓  ${b}`, { x: 1.65, y: 3.2 + i * 1.0, w: 10.0, h: 0.82, fontSize: 14, color: T.text, align: "left", valign: "middle" });
-//   });
-//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 6.9, w: 13.333, h: 0.6, fill: { color: T.accent }, line: { color: T.accent } });
-//   s.addText("O'qituvchi AI  ·  aiuqituvchi.vercel.app", { x: 0, y: 6.9, w: 13.333, h: 0.6, fontSize: 13, color: T.bg, bold: true, align: "center", valign: "middle" });
-// }
-
-// async function createPresentation(slides, title, subject, grade) {
-//   const pres = new PptxGenJS();
-//   pres.layout = "LAYOUT_WIDE";
-//   pres.title = title || "Taqdimot";
-
-//   addCoverSlide(pres, title, subject, grade);
-
-//   const layouts = [
-//     addSideAccentSlide, addGridSlide, addTwoColumnSlide,
-//     addStatSlide, addSideAccentSlide, addGridSlide, addTwoColumnSlide,
-//   ];
-
-//   slides.forEach((slide, i) => {
-//     if (i === slides.length - 1) {
-//       addSummarySlide(pres, slide);
-//     } else {
-//       layouts[i % layouts.length](pres, slide, (i % THEMES.length) + 1);
-//     }
-//   });
-
-//   return await pres.write({ outputType: "nodebuffer" });
-// }
 const THEMES = [
   { bg: "0F172A", accent: "0EA5E9", accent2: "38BDF8", text: "FFFFFF", sub: "94A3B8", card: "1E293B" },
   { bg: "0D1F12", accent: "22C55E", accent2: "86EFAC", text: "FFFFFF", sub: "86EFAC", card: "14532D" },
@@ -1260,115 +1137,67 @@ function addCoverSlide(pres, title, subject, grade) {
   s.addText("O'qituvchi AI  ·  aiuqituvchi.vercel.app", { x: 0.6, y: 6.25, w: 7.9, h: 0.4, fontSize: 11, color: T.sub, align: "left" });
 }
 
-// Layout 1: Chap — matn, O'ng — rasm
-function addSideAccentSlide(pres, slide, themeIdx, img) {
+function addSideAccentSlide(pres, slide, themeIdx) {
   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.6, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
   s.addText(String(themeIdx), { x: 0.05, y: 0.25, w: 0.5, h: 0.5, fontSize: 12, color: T.bg, bold: true, align: "center", valign: "middle" });
-
-  // Rasm o'ng tomonda
-  s.addShape(pres.shapes.RECTANGLE, { x: 7.2, y: 0, w: 6.13, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
-  if (img) {
-    addImage(s, img, { x: 7.2, y: 0, w: 6.13, h: 7.5, sizing: { type: "cover", w: 6.13, h: 7.5 } });
-    // Rasmni qoplaydigan gradient overlay
-    s.addShape(pres.shapes.RECTANGLE, { x: 7.2, y: 0, w: 6.13, h: 7.5, fill: { color: T.bg, transparency: 40 }, line: { color: T.bg, transparency: 100 } });
-  }
-  s.addShape(pres.shapes.RECTANGLE, { x: 7.2, y: 0, w: 0.08, h: 7.5, fill: { color: T.accent, transparency: 50 }, line: { color: T.accent, transparency: 50 } });
-
-  // Chap matn qismi
-  s.addText(slide.title, { x: 0.9, y: 0.35, w: 6.0, h: 0.9, fontSize: 28, color: T.text, bold: true, align: "left" });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y: 1.35, w: 3.0, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-  if (slide.body) s.addText(slide.body, { x: 0.9, y: 1.55, w: 6.0, h: 0.75, fontSize: 13, color: T.sub, align: "left" });
+  s.addText(slide.title, { x: 0.9, y: 0.35, w: 12.0, h: 0.9, fontSize: 30, color: T.text, bold: true, align: "left" });
+  s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y: 1.35, w: 3.2, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+  if (slide.body) s.addText(slide.body, { x: 0.9, y: 1.55, w: 12.0, h: 0.8, fontSize: 14, color: T.sub, align: "left" });
   (slide.bullets || []).slice(0, 4).forEach((b, i) => {
-    const y = 2.5 + i * 1.15;
-    s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 6.0, h: 0.95, fill: { color: T.card }, line: { color: T.accent, transparency: 70 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
-    s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 0.07, h: 0.95, fill: { color: T.accent }, line: { color: T.accent } });
-    s.addText(b, { x: 1.15, y: y + 0.05, w: 5.6, h: 0.85, fontSize: 13, color: T.text, align: "left", valign: "middle" });
+    const y = 2.55 + i * 1.1;
+    s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 12.0, h: 0.92, fill: { color: T.card }, line: { color: T.accent, transparency: 70 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
+    s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 0.07, h: 0.92, fill: { color: T.accent }, line: { color: T.accent } });
+    s.addText(b, { x: 1.15, y: y + 0.05, w: 11.6, h: 0.82, fontSize: 14, color: T.text, align: "left", valign: "middle" });
   });
 }
 
-// Layout 2: Yuqori — rasm, Pastda — grid kartalar
-function addGridSlide(pres, slide, themeIdx, img) {
+function addGridSlide(pres, slide, themeIdx) {
   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
-
-  // Yuqori rasm paneli
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 3.2, fill: { color: T.card }, line: { color: T.card } });
-  if (img) {
-    addImage(s, img, { x: 0, y: 0, w: 13.333, h: 3.2, sizing: { type: "cover", w: 13.333, h: 3.2 } });
-    s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 3.2, fill: { color: T.bg, transparency: 45 }, line: { color: T.bg, transparency: 100 } });
-  }
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.08, fill: { color: T.accent }, line: { color: T.accent } });
-  s.addText(slide.title, { x: 0.5, y: 0.2, w: 12.3, h: 0.85, fontSize: 26, color: T.text, bold: true, align: "left", valign: "middle" });
-  if (slide.body) s.addText(slide.body, { x: 0.5, y: 1.2, w: 12.3, h: 0.7, fontSize: 13, color: T.sub, align: "left" });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 3.18, w: 13.333, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-
-  // Pastki grid kartalar
-  const bullets = slide.bullets || [];
-  const cols = bullets.length <= 2 ? 2 : 3;
-  const cardW = bullets.length <= 2 ? 6.3 : 4.1;
+  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.8, fill: { color: T.card }, line: { color: T.card } });
+  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.78, w: 13.333, h: 0.05, fill: { color: T.accent }, line: { color: T.accent } });
+  s.addText(slide.title, { x: 0.5, y: 0.1, w: 12.3, h: 0.6, fontSize: 22, color: T.text, bold: true, align: "left", valign: "middle" });
+  if (slide.body) s.addText(slide.body, { x: 0.5, y: 0.95, w: 12.3, h: 0.55, fontSize: 13, color: T.sub, align: "left" });
+  const bullets = slide.bullets || []; const cols = bullets.length <= 2 ? 2 : 3; const cardW = bullets.length <= 2 ? 6.0 : 3.9;
   bullets.slice(0, 6).forEach((b, i) => {
     const col = i % cols; const row = Math.floor(i / cols);
-    const x = 0.3 + col * (cardW + 0.2); const y = 3.38 + row * 2.0;
-    s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 1.75, fill: { color: T.card }, line: { color: T.accent, transparency: 75 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
-    s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-    s.addText(String(i + 1), { x: x + 0.15, y: y + 0.15, w: 0.5, h: 0.5, fontSize: 16, color: T.accent, bold: true, align: "center", valign: "middle" });
-    s.addText(b, { x: x + 0.75, y: y + 0.15, w: cardW - 0.95, h: 1.45, fontSize: 13, color: T.text, align: "left", valign: "middle" });
+    const x = 0.45 + col * (cardW + 0.2); const y = 1.65 + row * 2.5;
+    s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 2.2, fill: { color: T.card }, line: { color: T.accent, transparency: 75 }, shadow: { type: "outer", blur: 6, offset: 2, angle: 135, color: "000000", opacity: 0.18 } });
+    s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 0.07, fill: { color: T.accent }, line: { color: T.accent } });
+    s.addShape(pres.shapes.OVAL, { x: x + cardW - 0.68, y: y + 0.15, w: 0.48, h: 0.48, fill: { color: T.accent, transparency: 80 }, line: { color: T.accent, transparency: 60 } });
+    s.addText(String(i + 1), { x: x + cardW - 0.68, y: y + 0.15, w: 0.48, h: 0.48, fontSize: 13, color: T.accent, bold: true, align: "center", valign: "middle" });
+    s.addText(b, { x: x + 0.2, y: y + 0.25, w: cardW - 0.95, h: 1.8, fontSize: 13, color: T.text, align: "left", valign: "middle" });
   });
 }
 
-// Layout 3: Chap — rasm, O'ng — raqamlangan bullets
-function addTwoColumnSlide(pres, slide, themeIdx, img) {
+function addTwoColumnSlide(pres, slide, themeIdx) {
   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
+  s.addShape(pres.shapes.RECTANGLE, { x: 6.8, y: 0, w: 6.53, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.1, fill: { color: T.accent }, line: { color: T.accent } });
-
-  // Chap rasm paneli
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.1, w: 6.3, h: 7.4, fill: { color: T.card }, line: { color: T.card } });
-  if (img) {
-    addImage(s, img, { x: 0, y: 0.1, w: 6.3, h: 7.4, sizing: { type: "cover", w: 6.3, h: 7.4 } });
-    s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.1, w: 6.3, h: 7.4, fill: { color: T.bg, transparency: 35 }, line: { color: T.bg, transparency: 100 } });
-  }
-  // Rasmda sarlavha
-  s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.8, w: 6.3, h: 1.7, fill: { color: T.bg, transparency: 25 }, line: { color: T.bg, transparency: 100 } });
-  s.addText(slide.title, { x: 0.3, y: 5.9, w: 5.7, h: 1.4, fontSize: 24, color: T.text, bold: true, align: "left", valign: "middle" });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.3, y: 5.88, w: 2.0, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-
-  // O'ng bullets
-  s.addText(`0${themeIdx}`, { x: 6.5, y: 0.2, w: 6.6, h: 0.7, fontSize: 42, color: T.accent, bold: true, align: "right", transparency: 70 });
-  if (slide.body) s.addText(slide.body, { x: 6.5, y: 1.1, w: 6.6, h: 0.6, fontSize: 13, color: T.sub, align: "left" });
+  s.addText(`0${themeIdx}`, { x: 6.9, y: 0.25, w: 6.2, h: 0.65, fontSize: 40, color: T.accent, bold: true, align: "right", transparency: 70 });
+  s.addText(slide.title, { x: 0.5, y: 0.4, w: 6.0, h: 1.5, fontSize: 28, color: T.text, bold: true, align: "left", valign: "middle" });
+  if (slide.body) s.addText(slide.body, { x: 0.5, y: 2.1, w: 6.0, h: 1.5, fontSize: 13, color: T.sub, align: "left" });
+  s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 6.8, w: 2.0, h: 0.07, fill: { color: T.accent }, line: { color: T.accent } });
   (slide.bullets || []).slice(0, 5).forEach((b, i) => {
-    const y = 1.85 + i * 1.1;
-    s.addShape(pres.shapes.RECTANGLE, { x: 6.5, y, w: 6.5, h: 0.92, fill: { color: T.card }, line: { color: T.accent, transparency: 80 }, shadow: { type: "outer", blur: 4, offset: 1, angle: 135, color: "000000", opacity: 0.12 } });
-    s.addText(`${i + 1}`, { x: 6.5, y, w: 0.72, h: 0.92, fontSize: 20, color: T.accent, bold: true, align: "center", valign: "middle" });
-    s.addShape(pres.shapes.LINE, { x: 7.22, y: y + 0.18, w: 0, h: 0.56, line: { color: T.accent, width: 1, transparency: 60 } });
-    s.addText(b, { x: 7.4, y: y + 0.06, w: 5.4, h: 0.8, fontSize: 13, color: T.text, align: "left", valign: "middle" });
+    const y = 1.1 + i * 1.22;
+    s.addShape(pres.shapes.RECTANGLE, { x: 7.0, y, w: 5.9, h: 1.02, fill: { color: T.bg }, line: { color: T.accent, transparency: 80 }, shadow: { type: "outer", blur: 4, offset: 1, angle: 135, color: "000000", opacity: 0.12 } });
+    s.addText(`${i + 1}`, { x: 7.0, y, w: 0.7, h: 1.02, fontSize: 20, color: T.accent, bold: true, align: "center", valign: "middle" });
+    s.addShape(pres.shapes.LINE, { x: 7.7, y: y + 0.2, w: 0, h: 0.62, line: { color: T.accent, width: 1, transparency: 60 } });
+    s.addText(b, { x: 7.85, y: y + 0.06, w: 4.9, h: 0.9, fontSize: 13, color: T.text, align: "left", valign: "middle" });
   });
 }
 
-// Layout 4: Rasm fon sifatida, matn ustida
-function addStatSlide(pres, slide, themeIdx, img) {
+function addStatSlide(pres, slide, themeIdx) {
   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
-
-  // To'liq fon rasm
-  if (img) {
-    addImage(s, img, { x: 0, y: 0, w: 13.333, h: 7.5, sizing: { type: "cover", w: 13.333, h: 7.5 } });
-    s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: T.bg, transparency: 30 }, line: { color: T.bg, transparency: 100 } });
-  }
-
+  s.addText(String(themeIdx).padStart(2, "0"), { x: 7.0, y: 0.5, w: 5.8, h: 6.0, fontSize: 220, color: T.card, bold: true, align: "center", valign: "middle" });
   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.12, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
-
-  // Chap matn panel (yarim shaffof)
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.3, y: 0.4, w: 6.5, h: 6.7, fill: { color: T.bg, transparency: 20 }, line: { color: T.bg, transparency: 100 } });
-
-  s.addText(slide.title, { x: 0.5, y: 0.6, w: 6.0, h: 1.2, fontSize: 30, color: T.text, bold: true, align: "left" });
-  s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.9, w: 2.6, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
-  if (slide.body) s.addText(slide.body, { x: 0.5, y: 2.1, w: 6.0, h: 0.9, fontSize: 14, color: T.sub, align: "left" });
+  s.addText(slide.title, { x: 0.4, y: 0.5, w: 7.2, h: 1.2, fontSize: 32, color: T.text, bold: true, align: "left" });
+  s.addShape(pres.shapes.RECTANGLE, { x: 0.4, y: 1.85, w: 2.6, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+  if (slide.body) s.addText(slide.body, { x: 0.4, y: 2.1, w: 7.0, h: 1.0, fontSize: 14, color: T.sub, align: "left" });
   (slide.bullets || []).slice(0, 4).forEach((b, i) => {
-    s.addText(`→  ${b}`, { x: 0.5, y: 3.2 + i * 0.95, w: 6.0, h: 0.78, fontSize: 14, color: T.text, align: "left" });
-    s.addShape(pres.shapes.LINE, { x: 0.5, y: 3.2 + i * 0.95 + 0.78, w: 5.6, h: 0, line: { color: T.card, width: 1 } });
+    s.addText(`→  ${b}`, { x: 0.4, y: 3.3 + i * 0.95, w: 7.0, h: 0.8, fontSize: 14, color: T.text, align: "left" });
+    s.addShape(pres.shapes.LINE, { x: 0.4, y: 3.3 + i * 0.95 + 0.8, w: 6.6, h: 0, line: { color: T.card, width: 1 } });
   });
-
-  // O'ng tomonda katta raqam
-  s.addText(String(themeIdx).padStart(2, "0"), { x: 7.5, y: 1.5, w: 5.5, h: 5.0, fontSize: 200, color: T.accent, bold: true, align: "center", valign: "middle", transparency: 25 });
 }
 
 function addSummarySlide(pres, slide) {
@@ -1398,28 +1227,199 @@ async function createPresentation(slides, title, subject, grade) {
     addStatSlide, addSideAccentSlide, addGridSlide, addTwoColumnSlide,
   ];
 
-  for (let i = 0; i < slides.length; i++) {
-    const slide = slides[i];
-    const isLast = i === slides.length - 1;
-
-    // Har bir slayd uchun rasm olish
-    let routed = null;
-    try {
-      routed = await resolveImage(slide);
-    } catch (err) {
-      console.warn("[Image fallback]", slide.title, err.message);
-      routed = svgData(slide, "abstract");
-    }
-
-    const img = routed?.image || routed;
-
-    if (isLast) {
+  slides.forEach((slide, i) => {
+    if (i === slides.length - 1) {
       addSummarySlide(pres, slide);
     } else {
-      const layoutFn = layouts[i % layouts.length];
-      layoutFn(pres, slide, (i % THEMES.length) + 1, img);
+      layouts[i % layouts.length](pres, slide, (i % THEMES.length) + 1);
     }
-  }
+  });
 
   return await pres.write({ outputType: "nodebuffer" });
 }
+// const THEMES = [
+//   { bg: "0F172A", accent: "0EA5E9", accent2: "38BDF8", text: "FFFFFF", sub: "94A3B8", card: "1E293B" },
+//   { bg: "0D1F12", accent: "22C55E", accent2: "86EFAC", text: "FFFFFF", sub: "86EFAC", card: "14532D" },
+//   { bg: "1A0A2E", accent: "A855F7", accent2: "D8B4FE", text: "FFFFFF", sub: "C4B5FD", card: "2D1B69" },
+//   { bg: "1C0A00", accent: "F97316", accent2: "FED7AA", text: "FFFFFF", sub: "FED7AA", card: "431407" },
+//   { bg: "0A1628", accent: "06B6D4", accent2: "67E8F9", text: "FFFFFF", sub: "A5F3FC", card: "164E63" },
+// ];
+// function getTheme(i) { return THEMES[i % THEMES.length]; }
+
+// function addCoverSlide(pres, title, subject, grade) {
+//   const T = THEMES[0]; const s = pres.addSlide(); s.background = { color: T.bg };
+//   s.addShape(pres.shapes.RECTANGLE, { x: 8.8, y: 0, w: 4.53, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 8.8, y: 0, w: 0.15, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
+//   s.addShape(pres.shapes.OVAL, { x: 9.6, y: 0.4, w: 2.8, h: 2.8, fill: { color: T.accent, transparency: 85 }, line: { color: T.accent, transparency: 70 } });
+//   s.addShape(pres.shapes.OVAL, { x: 10.5, y: 3.8, w: 1.8, h: 1.8, fill: { color: T.accent2, transparency: 80 }, line: { color: T.accent2, transparency: 60 } });
+//   s.addText("TAQDIMOT", { x: 8.95, y: 0.5, w: 4.2, h: 0.45, fontSize: 11, color: T.accent, bold: true, charSpacing: 4, align: "center" });
+//   s.addText(subject || "Fan", { x: 8.95, y: 1.1, w: 4.2, h: 0.45, fontSize: 14, color: T.text, align: "center" });
+//   s.addText(grade || "", { x: 8.95, y: 1.6, w: 4.2, h: 0.4, fontSize: 13, color: T.sub, align: "center" });
+//   s.addText(title, { x: 0.6, y: 1.8, w: 7.9, h: 3.2, fontSize: 44, color: T.text, bold: true, align: "left", valign: "middle" });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0.6, y: 6.1, w: 7.9, h: 0.07, fill: { color: T.accent }, line: { color: T.accent } });
+//   s.addText("O'qituvchi AI  ·  aiuqituvchi.vercel.app", { x: 0.6, y: 6.25, w: 7.9, h: 0.4, fontSize: 11, color: T.sub, align: "left" });
+// }
+
+// // Layout 1: Chap — matn, O'ng — rasm
+// function addSideAccentSlide(pres, slide, themeIdx, img) {
+//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.6, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
+//   s.addText(String(themeIdx), { x: 0.05, y: 0.25, w: 0.5, h: 0.5, fontSize: 12, color: T.bg, bold: true, align: "center", valign: "middle" });
+
+//   // Rasm o'ng tomonda
+//   s.addShape(pres.shapes.RECTANGLE, { x: 7.2, y: 0, w: 6.13, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
+//   if (img) {
+//     addImage(s, img, { x: 7.2, y: 0, w: 6.13, h: 7.5, sizing: { type: "cover", w: 6.13, h: 7.5 } });
+//     // Rasmni qoplaydigan gradient overlay
+//     s.addShape(pres.shapes.RECTANGLE, { x: 7.2, y: 0, w: 6.13, h: 7.5, fill: { color: T.bg, transparency: 40 }, line: { color: T.bg, transparency: 100 } });
+//   }
+//   s.addShape(pres.shapes.RECTANGLE, { x: 7.2, y: 0, w: 0.08, h: 7.5, fill: { color: T.accent, transparency: 50 }, line: { color: T.accent, transparency: 50 } });
+
+//   // Chap matn qismi
+//   s.addText(slide.title, { x: 0.9, y: 0.35, w: 6.0, h: 0.9, fontSize: 28, color: T.text, bold: true, align: "left" });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y: 1.35, w: 3.0, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+//   if (slide.body) s.addText(slide.body, { x: 0.9, y: 1.55, w: 6.0, h: 0.75, fontSize: 13, color: T.sub, align: "left" });
+//   (slide.bullets || []).slice(0, 4).forEach((b, i) => {
+//     const y = 2.5 + i * 1.15;
+//     s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 6.0, h: 0.95, fill: { color: T.card }, line: { color: T.accent, transparency: 70 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
+//     s.addShape(pres.shapes.RECTANGLE, { x: 0.9, y, w: 0.07, h: 0.95, fill: { color: T.accent }, line: { color: T.accent } });
+//     s.addText(b, { x: 1.15, y: y + 0.05, w: 5.6, h: 0.85, fontSize: 13, color: T.text, align: "left", valign: "middle" });
+//   });
+// }
+
+// // Layout 2: Yuqori — rasm, Pastda — grid kartalar
+// function addGridSlide(pres, slide, themeIdx, img) {
+//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
+
+//   // Yuqori rasm paneli
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 3.2, fill: { color: T.card }, line: { color: T.card } });
+//   if (img) {
+//     addImage(s, img, { x: 0, y: 0, w: 13.333, h: 3.2, sizing: { type: "cover", w: 13.333, h: 3.2 } });
+//     s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 3.2, fill: { color: T.bg, transparency: 45 }, line: { color: T.bg, transparency: 100 } });
+//   }
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.08, fill: { color: T.accent }, line: { color: T.accent } });
+//   s.addText(slide.title, { x: 0.5, y: 0.2, w: 12.3, h: 0.85, fontSize: 26, color: T.text, bold: true, align: "left", valign: "middle" });
+//   if (slide.body) s.addText(slide.body, { x: 0.5, y: 1.2, w: 12.3, h: 0.7, fontSize: 13, color: T.sub, align: "left" });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 3.18, w: 13.333, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+
+//   // Pastki grid kartalar
+//   const bullets = slide.bullets || [];
+//   const cols = bullets.length <= 2 ? 2 : 3;
+//   const cardW = bullets.length <= 2 ? 6.3 : 4.1;
+//   bullets.slice(0, 6).forEach((b, i) => {
+//     const col = i % cols; const row = Math.floor(i / cols);
+//     const x = 0.3 + col * (cardW + 0.2); const y = 3.38 + row * 2.0;
+//     s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 1.75, fill: { color: T.card }, line: { color: T.accent, transparency: 75 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
+//     s.addShape(pres.shapes.RECTANGLE, { x, y, w: cardW, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+//     s.addText(String(i + 1), { x: x + 0.15, y: y + 0.15, w: 0.5, h: 0.5, fontSize: 16, color: T.accent, bold: true, align: "center", valign: "middle" });
+//     s.addText(b, { x: x + 0.75, y: y + 0.15, w: cardW - 0.95, h: 1.45, fontSize: 13, color: T.text, align: "left", valign: "middle" });
+//   });
+// }
+
+// // Layout 3: Chap — rasm, O'ng — raqamlangan bullets
+// function addTwoColumnSlide(pres, slide, themeIdx, img) {
+//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 0.1, fill: { color: T.accent }, line: { color: T.accent } });
+
+//   // Chap rasm paneli
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.1, w: 6.3, h: 7.4, fill: { color: T.card }, line: { color: T.card } });
+//   if (img) {
+//     addImage(s, img, { x: 0, y: 0.1, w: 6.3, h: 7.4, sizing: { type: "cover", w: 6.3, h: 7.4 } });
+//     s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0.1, w: 6.3, h: 7.4, fill: { color: T.bg, transparency: 35 }, line: { color: T.bg, transparency: 100 } });
+//   }
+//   // Rasmda sarlavha
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.8, w: 6.3, h: 1.7, fill: { color: T.bg, transparency: 25 }, line: { color: T.bg, transparency: 100 } });
+//   s.addText(slide.title, { x: 0.3, y: 5.9, w: 5.7, h: 1.4, fontSize: 24, color: T.text, bold: true, align: "left", valign: "middle" });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0.3, y: 5.88, w: 2.0, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+
+//   // O'ng bullets
+//   s.addText(`0${themeIdx}`, { x: 6.5, y: 0.2, w: 6.6, h: 0.7, fontSize: 42, color: T.accent, bold: true, align: "right", transparency: 70 });
+//   if (slide.body) s.addText(slide.body, { x: 6.5, y: 1.1, w: 6.6, h: 0.6, fontSize: 13, color: T.sub, align: "left" });
+//   (slide.bullets || []).slice(0, 5).forEach((b, i) => {
+//     const y = 1.85 + i * 1.1;
+//     s.addShape(pres.shapes.RECTANGLE, { x: 6.5, y, w: 6.5, h: 0.92, fill: { color: T.card }, line: { color: T.accent, transparency: 80 }, shadow: { type: "outer", blur: 4, offset: 1, angle: 135, color: "000000", opacity: 0.12 } });
+//     s.addText(`${i + 1}`, { x: 6.5, y, w: 0.72, h: 0.92, fontSize: 20, color: T.accent, bold: true, align: "center", valign: "middle" });
+//     s.addShape(pres.shapes.LINE, { x: 7.22, y: y + 0.18, w: 0, h: 0.56, line: { color: T.accent, width: 1, transparency: 60 } });
+//     s.addText(b, { x: 7.4, y: y + 0.06, w: 5.4, h: 0.8, fontSize: 13, color: T.text, align: "left", valign: "middle" });
+//   });
+// }
+
+// // Layout 4: Rasm fon sifatida, matn ustida
+// function addStatSlide(pres, slide, themeIdx, img) {
+//   const T = getTheme(themeIdx); const s = pres.addSlide(); s.background = { color: T.bg };
+
+//   // To'liq fon rasm
+//   if (img) {
+//     addImage(s, img, { x: 0, y: 0, w: 13.333, h: 7.5, sizing: { type: "cover", w: 13.333, h: 7.5 } });
+//     s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: T.bg, transparency: 30 }, line: { color: T.bg, transparency: 100 } });
+//   }
+
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 0.12, h: 7.5, fill: { color: T.accent }, line: { color: T.accent } });
+
+//   // Chap matn panel (yarim shaffof)
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0.3, y: 0.4, w: 6.5, h: 6.7, fill: { color: T.bg, transparency: 20 }, line: { color: T.bg, transparency: 100 } });
+
+//   s.addText(slide.title, { x: 0.5, y: 0.6, w: 6.0, h: 1.2, fontSize: 30, color: T.text, bold: true, align: "left" });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0.5, y: 1.9, w: 2.6, h: 0.06, fill: { color: T.accent }, line: { color: T.accent } });
+//   if (slide.body) s.addText(slide.body, { x: 0.5, y: 2.1, w: 6.0, h: 0.9, fontSize: 14, color: T.sub, align: "left" });
+//   (slide.bullets || []).slice(0, 4).forEach((b, i) => {
+//     s.addText(`→  ${b}`, { x: 0.5, y: 3.2 + i * 0.95, w: 6.0, h: 0.78, fontSize: 14, color: T.text, align: "left" });
+//     s.addShape(pres.shapes.LINE, { x: 0.5, y: 3.2 + i * 0.95 + 0.78, w: 5.6, h: 0, line: { color: T.card, width: 1 } });
+//   });
+
+//   // O'ng tomonda katta raqam
+//   s.addText(String(themeIdx).padStart(2, "0"), { x: 7.5, y: 1.5, w: 5.5, h: 5.0, fontSize: 200, color: T.accent, bold: true, align: "center", valign: "middle", transparency: 25 });
+// }
+
+// function addSummarySlide(pres, slide) {
+//   const T = THEMES[0]; const s = pres.addSlide(); s.background = { color: T.bg };
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: T.card }, line: { color: T.card } });
+//   s.addShape(pres.shapes.OVAL, { x: 4.7, y: 0.8, w: 4.0, h: 4.0, fill: { color: T.accent, transparency: 92 }, line: { color: T.accent, transparency: 75 } });
+//   s.addShape(pres.shapes.OVAL, { x: 5.4, y: 1.5, w: 2.5, h: 2.5, fill: { color: T.accent, transparency: 85 }, line: { color: T.accent, transparency: 65 } });
+//   s.addText("XULOSA", { x: 0.6, y: 0.6, w: 12.1, h: 0.55, fontSize: 12, color: T.accent, bold: true, charSpacing: 4, align: "center" });
+//   s.addText(slide.title, { x: 0.6, y: 1.3, w: 12.1, h: 1.5, fontSize: 34, color: T.text, bold: true, align: "center", valign: "middle" });
+//   (slide.bullets || []).slice(0, 3).forEach((b, i) => {
+//     s.addShape(pres.shapes.RECTANGLE, { x: 1.5, y: 3.2 + i * 1.0, w: 10.3, h: 0.82, fill: { color: T.bg }, line: { color: T.accent, transparency: 70 }, shadow: { type: "outer", blur: 5, offset: 2, angle: 135, color: "000000", opacity: 0.15 } });
+//     s.addText(`✓  ${b}`, { x: 1.65, y: 3.2 + i * 1.0, w: 10.0, h: 0.82, fontSize: 14, color: T.text, align: "left", valign: "middle" });
+//   });
+//   s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 6.9, w: 13.333, h: 0.6, fill: { color: T.accent }, line: { color: T.accent } });
+//   s.addText("O'qituvchi AI  ·  aiuqituvchi.vercel.app", { x: 0, y: 6.9, w: 13.333, h: 0.6, fontSize: 13, color: T.bg, bold: true, align: "center", valign: "middle" });
+// }
+
+// async function createPresentation(slides, title, subject, grade) {
+//   const pres = new PptxGenJS();
+//   pres.layout = "LAYOUT_WIDE";
+//   pres.title = title || "Taqdimot";
+
+//   addCoverSlide(pres, title, subject, grade);
+
+//   const layouts = [
+//     addSideAccentSlide, addGridSlide, addTwoColumnSlide,
+//     addStatSlide, addSideAccentSlide, addGridSlide, addTwoColumnSlide,
+//   ];
+
+//   for (let i = 0; i < slides.length; i++) {
+//     const slide = slides[i];
+//     const isLast = i === slides.length - 1;
+
+//     // Har bir slayd uchun rasm olish
+//     let routed = null;
+//     try {
+//       routed = await resolveImage(slide);
+//     } catch (err) {
+//       console.warn("[Image fallback]", slide.title, err.message);
+//       routed = svgData(slide, "abstract");
+//     }
+
+//     const img = routed?.image || routed;
+
+//     if (isLast) {
+//       addSummarySlide(pres, slide);
+//     } else {
+//       const layoutFn = layouts[i % layouts.length];
+//       layoutFn(pres, slide, (i % THEMES.length) + 1, img);
+//     }
+//   }
+
+//   return await pres.write({ outputType: "nodebuffer" });
+// }
