@@ -439,30 +439,33 @@ async function callGeminiJson(systemPrompt, payload) {
 
   throw new Error("All Gemini JSON models failed: " + lastError);
 }
+// async function classifySlide(slide) {
+//   const payload = {
+//     slide_title: slide.title || "",
+//     slide_body: slide.body || "",
+//     bullet_points: slide.bullets || []
+//   };
+
+//   try {
+//     const raw = await callGeminiClassifier(payload);
+//     const parsed = safeJsonParse(raw);
+
+//     if (parsed.image_type === "FACTUAL" && parsed.search_query) {
+//       return { image_type: "FACTUAL", search_query: clean(parsed.search_query) };
+//     }
+
+//     if (parsed.image_type === "ABSTRACT" && parsed.image_prompt) {
+//       return { image_type: "ABSTRACT", image_prompt: clean(parsed.image_prompt) };
+//     }
+
+//     throw new Error("Invalid classifier result: " + raw);
+//   } catch (err) {
+//     console.warn("[Classifier fallback]", slide.title, "-", err.message);
+//     return heuristicRoute(slide);
+//   }
+// }
 async function classifySlide(slide) {
-  const payload = {
-    slide_title: slide.title || "",
-    slide_body: slide.body || "",
-    bullet_points: slide.bullets || []
-  };
-
-  try {
-    const raw = await callGeminiClassifier(payload);
-    const parsed = safeJsonParse(raw);
-
-    if (parsed.image_type === "FACTUAL" && parsed.search_query) {
-      return { image_type: "FACTUAL", search_query: clean(parsed.search_query) };
-    }
-
-    if (parsed.image_type === "ABSTRACT" && parsed.image_prompt) {
-      return { image_type: "ABSTRACT", image_prompt: clean(parsed.image_prompt) };
-    }
-
-    throw new Error("Invalid classifier result: " + raw);
-  } catch (err) {
-    console.warn("[Classifier fallback]", slide.title, "-", err.message);
-    return heuristicRoute(slide);
-  }
+  return heuristicRoute(slide);
 }
 async function generateSlidesFromTopic({ subject, grade, topic, slidesCount = 7 }) {
   const payload = {
