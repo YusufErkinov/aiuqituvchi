@@ -1354,33 +1354,16 @@ async function downloadDoc(id, format) {
 
   chargeDownload(doc);
 
-  // PPTX
   if (doc.type?.toLowerCase().includes('taqdimot')) {
     currentDoc = doc;
     await downloadHybridPptx();
     return;
   }
 
-  // WORD — docx.js
-  if (!window.docx) {
-    toast('docx kutubxonasi yuklanmagan');
-    return;
-  }
-
-  const { Document, Packer, Paragraph, TextRun,
-          Table, TableRow, TableCell,
-          WidthType, BorderStyle } = window.docx;
-
   const content = doc.content || (doc.items || []).join('\n');
   const isTest  = doc.type?.toLowerCase().includes('test');
-  const margins = { top: 567, bottom: 567, left: 1701, right: 1134 };
 
-  function txt(text, opts = {}) {
-    return new TextRun({ font: 'Times New Roman', size: opts.size || 20, ...opts, text: String(text) });
-  }
-  function para(children, spAfter = 60, spBefore = 0) {
-    return new Paragraph({ children, spacing: { after: spAfter, before: spBefore } });
-  }
+  // ── TEST: 2 USTUNLI HTML → .doc ──────────────────────────────────────────
   function parseMeta(text) {
     return {
       fan:   text.match(/Fan:\s*(.+)/i)?.[1]?.trim()   || doc.subject || '',
@@ -1388,6 +1371,7 @@ async function downloadDoc(id, format) {
       mavzu: text.match(/Mavzu:\s*(.+)/i)?.[1]?.trim() || doc.topic   || '',
     };
   }
+
   function parseQuestions(text) {
     const qs = []; let cur = null;
     for (const raw of text.split('\n')) {
@@ -1400,108 +1384,123 @@ async function downloadDoc(id, format) {
     if (cur) qs.push(cur);
     return qs;
   }
+
   function parseKey(text) {
     const m = text.match(/Javoblar kaliti[\s\S]*/i);
     return m ? m[0].trim() : '';
   }
-  function makeQBlock(q) {
-    if (!q) return [para([txt(' ')], 40)];
-    const ps = [para([txt(`${q.num}. ${q.text}`, { bold: true, size: 20 })], 20, 80)];
-    for (const o of (q.opts || [])) ps.push(para([txt(`${o.l}) ${o.t}`, { size: 19 })], 10));
-    return ps;
-  }
-  function makeCell(children, rightBorder) {
-    return new TableCell({
-      width: { size: 50, type: WidthType.PERCENTAGE },
-      borders: {
-        top:    { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left:   { style: BorderStyle.NONE },
-        right:  rightBorder
-          ? { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' }
-          : { style: BorderStyle.NONE },
-      },
-      margins: { left: 100, right: 100 },
-      children,
-    });
+
+  function renderQ(q) {
+    if (!q) return '<div style="min-height:80px"></div>';
+    return `
+      <div style="margin-bottom:6pt;margin-top:10pt">
+        <b>${q.num}. ${escapeHtml(q.text)}</b>
+      </div>
+      ${(q.opts || []).map(o =>
+        `<div style="margin-left:10pt;font-size:11pt">
+          ${o.l}) ${escapeHtml(o.t)}
+        </div>`
+      ).join('')}
+    `;
   }
 
-  let sections;
+  let bodyHtml = '';
+  const meta = parseMeta(content);
 
   if (isTest) {
-    const meta = parseMeta(content);
     const qs   = parseQuestions(content);
     const key  = parseKey(content);
     const half = Math.ceil(qs.length / 2);
     const lQs  = qs.slice(0, half);
     const rQs  = qs.slice(half);
 
-    const header = [
-      para([txt(`Test – ${meta.mavzu}`, { bold: true, size: 26 })], 80),
-      para([txt('Fan: ', { bold: true }), txt(meta.fan)], 40),
-      para([txt('Sinf: ', { bold: true }), txt(meta.sinf)], 40),
-      para([txt('Mavzu: ', { bold: true }), txt(meta.mavzu)], 140),
-    ];
+    const rows = Array.from({ length: Math.max(lQs.length, rQs.length) }, (_, i) => `
+      <tr>
+        <td style="width:50%;padding:0 8pt 0 0;border-right:1px solid #ccc;vertical-align:top">
+          ${renderQ(lQs[i])}
+        </td>
+        <td style="width:50%;padding:0 0 0 8pt;vertical-align:top">
+          ${renderQ(rQs[i])}
+        </td>
+      </tr>
+    `).join('');
 
-    const rows = [];
-    for (let i = 0; i < Math.max(lQs.length, rQs.length); i++) {
-      rows.push(new TableRow({
-        children: [
-          makeCell(makeQBlock(lQs[i]), true),
-          makeCell(makeQBlock(rQs[i]), false),
-        ]
-      }));
-    }
+    const keyLines = key.split('\n').filter(l => l.trim());
+    const keyHtml  = keyLines.map((l, i) =>
+      `<div style="${i === 0 ? 'font-weight:bold;margin-top:14pt' : ''};font-size:10pt">${escapeHtml(l)}</div>`
+    ).join('');
 
-    const keyParas = key.split('\n')
-      .filter(l => l.trim())
-      .map((line, i) => para([txt(line.trim(), { bold: i === 0, size: 18 })], 30));
-
-    sections = [{
-      properties: { page: { margin: margins } },
-      children: [
-        ...header,
-        new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }),
-        para([txt('')], 0, 180),
-        ...keyParas,
-      ],
-    }];
-
+    bodyHtml = `
+      <h2 style="font-size:14pt;margin:0 0 8pt">Test – ${escapeHtml(meta.mavzu)}</h2>
+      <div style="font-size:12pt;margin-bottom:4pt"><b>Fan:</b> ${escapeHtml(meta.fan)}</div>
+      <div style="font-size:12pt;margin-bottom:4pt"><b>Sinf:</b> ${escapeHtml(meta.sinf)}</div>
+      <div style="font-size:12pt;margin-bottom:14pt"><b>Mavzu:</b> ${escapeHtml(meta.mavzu)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11pt;font-family:'Times New Roman',serif">
+        ${rows}
+      </table>
+      ${keyHtml}
+    `;
   } else {
-    const children = content.split('\n').map(line => {
+    // Oddiy hujjat
+    const lines = content.split('\n').map(line => {
       const t = line.trim();
+      if (!t) return '<div style="margin:4pt 0"> </div>';
       const isH = /^(DARS ISHLANMA|HISOBOT|TEST|Darsning maqsadi|Javoblar kaliti|Kirish:|Xulosa:)/i.test(t)
                || /^[A-ZЁĞQO'\u0400-\u04FF][A-ZЁĞQO'\s\u0400-\u04FF]{4,}:$/.test(t);
-      return para([txt(t || ' ', { bold: isH, size: isH ? 24 : 22 })], isH ? 120 : 60);
-    });
-    sections = [{ properties: { page: { margin: margins } }, children }];
+      return isH
+        ? `<div style="font-weight:bold;font-size:13pt;margin:12pt 0 4pt">${escapeHtml(t)}</div>`
+        : `<div style="font-size:12pt;margin:3pt 0">${escapeHtml(t)}</div>`;
+    }).join('');
+    bodyHtml = lines;
   }
 
-  try {
-    const blob = await Packer.toBlob(new Document({ sections }));
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = (doc.title || 'hujjat').replace(/[^\w\s\-]/g, '').trim() + '.docx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const htmlContent = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="UTF-8">
+      <title>${escapeHtml(doc.title)}</title>
+      <!--[if gte mso 9]>
+      <xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml>
+      <![endif]-->
+      <style>
+        @page {
+          margin-top:    1cm;
+          margin-bottom: 1cm;
+          margin-left:   3cm;
+          margin-right:  2cm;
+        }
+        body {
+          font-family: "Times New Roman", serif;
+          font-size: 12pt;
+          line-height: 1.5;
+          color: #111;
+        }
+        table { border-collapse: collapse; width: 100%; }
+      </style>
+    </head>
+    <body>${bodyHtml}</body>
+    </html>
+  `;
 
-    totalDownloads++;
-    saveState();
-    updateUsageUI();
-    toast('Word fayl yuklandi ✓');
+  const safeName = (doc.title || 'hujjat')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, '_')
+    .toLowerCase();
 
-    await trackEvent('document_downloaded', {
-      doc_type: doc.type,
-      subject:  doc.subject,
-      topic:    doc.topic,
-    });
-  } catch(err) {
-    console.error('downloadDoc word error:', err);
-    toast('Xatolik: ' + err.message);
-  }
+  downloadBlob(htmlContent, safeName + '.doc', 'application/msword');
+
+  totalDownloads++;
+  saveState();
+  updateUsageUI();
+  toast('Word fayl yuklandi ✓');
+
+  await trackEvent('document_downloaded', {
+    doc_type: doc.type,
+    subject:  doc.subject,
+    topic:    doc.topic,
+  });
 }
     // async function downloadDoc(id, format){
     //   const doc = documents.find(d => d.id === id);
