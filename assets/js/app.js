@@ -1328,80 +1328,254 @@ function addVisualCard(slide, pptx, visual){
     .replace(/\s+/g, '_')
     .slice(0, 80);
 }
+async function downloadDoc(id, format) {
+  const doc = documents.find(d => d.id === id);
+  if (!doc) { toast('Fayl topilmadi'); return; }
 
-    async function downloadDoc(id, format){
-      const doc = documents.find(d => d.id === id);
-      if(!doc){
-        toast('Fayl topilmadi');
-        return;
-      }
+  await trackEvent("download_click", {
+    local_document_id: id,
+    title: doc.title,
+    doc_type: doc.type,
+    subject: doc.subject,
+    grade: doc.grade,
+    format
+  });
 
-      await trackEvent("download_click", {
-        local_document_id: id,
-        title: doc.title,
-        doc_type: doc.type,
-        subject: doc.subject,
-        grade: doc.grade,
-        format
-      });
+  if (!canDownload(doc)) {
+    await trackEvent("paywall_shown", {
+      reason: "balance_or_pro_quota_not_enough",
+      local_document_id: id,
+      balance,
+      pro_files_left: proFilesLeft
+    });
+    showUpgradeModal('Fayl yuklab olish uchun Donabay balansda kamida 1 000 so\'m bo\'lishi yoki Pro fayl kvotasi kerak.');
+    return;
+  }
 
-      if(!canDownload(doc)){
-        await trackEvent("paywall_shown", {
-          reason: "balance_or_pro_quota_not_enough",
-          local_document_id: id,
-          balance,
-          pro_files_left: proFilesLeft
-        });
-        showUpgradeModal('Fayl yuklab olish uchun Donabay balansda kamida 1 000 so‘m bo‘lishi yoki Pro fayl kvotasi kerak.');
-        return;
-      }
+  chargeDownload(doc);
 
-      chargeDownload(doc);
+  // PPTX
+  if (doc.type?.toLowerCase().includes('taqdimot')) {
+    currentDoc = doc;
+    await downloadHybridPptx();
+    return;
+  }
 
-      const safeName = (doc.title || 'hujjat').replace(/[\\/:*?"<>|]/g, '_').replace(/\\s+/g, '_').toLowerCase();
-      const htmlContent = `
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>${escapeHtml(doc.title)}</title>
-          <style>
-            body{font-family:"Times New Roman",serif;font-size:14pt;line-height:1.7;margin:34px;color:#111}
-            h2{margin:0 0 16px}
-            .meta{margin:0 0 22px}
-            .meta div{margin:2px 0}
-            p{margin:0 0 14px;text-align:justify}
-            ol{margin:0; padding-left:28px}
-            li{margin:0 0 14px}
-            .options{margin-top:8px; padding-left:14px}
-            .options div{margin:4px 0}
-            .answer-key{margin-top:8px;font-weight:700}
-            
-          <>
-        </head>
-        <body>
-          <h2>${escapeHtml(doc.title)}</h2>
-          <div class="meta">
-            <div><b>Fan:</b> ${escapeHtml(doc.subject)}</div>
-            <div><b>Sinf:</b> ${escapeHtml(doc.grade)}</div>
-            <div><b>Mavzu:</b> ${escapeHtml(doc.topic)}</div>
-          </div>
-          ${buildRichHtmlContent(doc.content || doc.items.join('\n'), doc.type)}
-        </body>
-        </html>`;
-      downloadBlob(htmlContent, safeName + '.doc', 'application/msword');
-      totalDownloads += 1;
-      saveState();
-      updateUsageUI();
+  // WORD — docx.js
+  if (!window.docx) {
+    toast('docx kutubxonasi yuklanmagan');
+    return;
+  }
 
-      await trackEvent("download_success", {
-        local_document_id: id,
-        title: doc.title,
-        charged_plan: currentPlan,
-        charged_amount: currentPlan === 'Donabay' ? FILE_PRICE : 0
-      });
+  const { Document, Packer, Paragraph, TextRun,
+          Table, TableRow, TableCell,
+          WidthType, BorderStyle } = window.docx;
 
-      toast('Fayl yuklab olindi');
+  const content = doc.content || (doc.items || []).join('\n');
+  const isTest  = doc.type?.toLowerCase().includes('test');
+  const margins = { top: 567, bottom: 567, left: 1701, right: 1134 };
+
+  function txt(text, opts = {}) {
+    return new TextRun({ font: 'Times New Roman', size: opts.size || 20, ...opts, text: String(text) });
+  }
+  function para(children, spAfter = 60, spBefore = 0) {
+    return new Paragraph({ children, spacing: { after: spAfter, before: spBefore } });
+  }
+  function parseMeta(text) {
+    return {
+      fan:   text.match(/Fan:\s*(.+)/i)?.[1]?.trim()   || doc.subject || '',
+      sinf:  text.match(/Sinf:\s*(.+)/i)?.[1]?.trim()  || doc.grade   || '',
+      mavzu: text.match(/Mavzu:\s*(.+)/i)?.[1]?.trim() || doc.topic   || '',
+    };
+  }
+  function parseQuestions(text) {
+    const qs = []; let cur = null;
+    for (const raw of text.split('\n')) {
+      const line = raw.trim();
+      const qm = line.match(/^(\d+)\.\s+(.+)/);
+      if (qm) { if (cur) qs.push(cur); cur = { num: +qm[1], text: qm[2], opts: [] }; continue; }
+      const om = line.match(/^([A-D])\)\s*(.+)/);
+      if (om && cur) cur.opts.push({ l: om[1], t: om[2] });
     }
+    if (cur) qs.push(cur);
+    return qs;
+  }
+  function parseKey(text) {
+    const m = text.match(/Javoblar kaliti[\s\S]*/i);
+    return m ? m[0].trim() : '';
+  }
+  function makeQBlock(q) {
+    if (!q) return [para([txt(' ')], 40)];
+    const ps = [para([txt(`${q.num}. ${q.text}`, { bold: true, size: 20 })], 20, 80)];
+    for (const o of (q.opts || [])) ps.push(para([txt(`${o.l}) ${o.t}`, { size: 19 })], 10));
+    return ps;
+  }
+  function makeCell(children, rightBorder) {
+    return new TableCell({
+      width: { size: 50, type: WidthType.PERCENTAGE },
+      borders: {
+        top:    { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left:   { style: BorderStyle.NONE },
+        right:  rightBorder
+          ? { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' }
+          : { style: BorderStyle.NONE },
+      },
+      margins: { left: 100, right: 100 },
+      children,
+    });
+  }
+
+  let sections;
+
+  if (isTest) {
+    const meta = parseMeta(content);
+    const qs   = parseQuestions(content);
+    const key  = parseKey(content);
+    const half = Math.ceil(qs.length / 2);
+    const lQs  = qs.slice(0, half);
+    const rQs  = qs.slice(half);
+
+    const header = [
+      para([txt(`Test – ${meta.mavzu}`, { bold: true, size: 26 })], 80),
+      para([txt('Fan: ', { bold: true }), txt(meta.fan)], 40),
+      para([txt('Sinf: ', { bold: true }), txt(meta.sinf)], 40),
+      para([txt('Mavzu: ', { bold: true }), txt(meta.mavzu)], 140),
+    ];
+
+    const rows = [];
+    for (let i = 0; i < Math.max(lQs.length, rQs.length); i++) {
+      rows.push(new TableRow({
+        children: [
+          makeCell(makeQBlock(lQs[i]), true),
+          makeCell(makeQBlock(rQs[i]), false),
+        ]
+      }));
+    }
+
+    const keyParas = key.split('\n')
+      .filter(l => l.trim())
+      .map((line, i) => para([txt(line.trim(), { bold: i === 0, size: 18 })], 30));
+
+    sections = [{
+      properties: { page: { margin: margins } },
+      children: [
+        ...header,
+        new Table({ rows, width: { size: 100, type: WidthType.PERCENTAGE } }),
+        para([txt('')], 0, 180),
+        ...keyParas,
+      ],
+    }];
+
+  } else {
+    const children = content.split('\n').map(line => {
+      const t = line.trim();
+      const isH = /^(DARS ISHLANMA|HISOBOT|TEST|Darsning maqsadi|Javoblar kaliti|Kirish:|Xulosa:)/i.test(t)
+               || /^[A-ZЁĞQO'\u0400-\u04FF][A-ZЁĞQO'\s\u0400-\u04FF]{4,}:$/.test(t);
+      return para([txt(t || ' ', { bold: isH, size: isH ? 24 : 22 })], isH ? 120 : 60);
+    });
+    sections = [{ properties: { page: { margin: margins } }, children }];
+  }
+
+  try {
+    const blob = await Packer.toBlob(new Document({ sections }));
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = (doc.title || 'hujjat').replace(/[^\w\s\-]/g, '').trim() + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    totalDownloads++;
+    saveState();
+    updateUsageUI();
+    toast('Word fayl yuklandi ✓');
+
+    await trackEvent('document_downloaded', {
+      doc_type: doc.type,
+      subject:  doc.subject,
+      topic:    doc.topic,
+    });
+  } catch(err) {
+    console.error('downloadDoc word error:', err);
+    toast('Xatolik: ' + err.message);
+  }
+}
+    // async function downloadDoc(id, format){
+    //   const doc = documents.find(d => d.id === id);
+    //   if(!doc){
+    //     toast('Fayl topilmadi');
+    //     return;
+    //   }
+
+    //   await trackEvent("download_click", {
+    //     local_document_id: id,
+    //     title: doc.title,
+    //     doc_type: doc.type,
+    //     subject: doc.subject,
+    //     grade: doc.grade,
+    //     format
+    //   });
+
+    //   if(!canDownload(doc)){
+    //     await trackEvent("paywall_shown", {
+    //       reason: "balance_or_pro_quota_not_enough",
+    //       local_document_id: id,
+    //       balance,
+    //       pro_files_left: proFilesLeft
+    //     });
+    //     showUpgradeModal('Fayl yuklab olish uchun Donabay balansda kamida 1 000 so‘m bo‘lishi yoki Pro fayl kvotasi kerak.');
+    //     return;
+    //   }
+
+    //   chargeDownload(doc);
+
+    //   const safeName = (doc.title || 'hujjat').replace(/[\\/:*?"<>|]/g, '_').replace(/\\s+/g, '_').toLowerCase();
+    //   const htmlContent = `
+    //     <html>
+    //     <head>
+    //       <meta charset="UTF-8">
+    //       <title>${escapeHtml(doc.title)}</title>
+    //       <style>
+    //         body{font-family:"Times New Roman",serif;font-size:14pt;line-height:1.7;margin:34px;color:#111}
+    //         h2{margin:0 0 16px}
+    //         .meta{margin:0 0 22px}
+    //         .meta div{margin:2px 0}
+    //         p{margin:0 0 14px;text-align:justify}
+    //         ol{margin:0; padding-left:28px}
+    //         li{margin:0 0 14px}
+    //         .options{margin-top:8px; padding-left:14px}
+    //         .options div{margin:4px 0}
+    //         .answer-key{margin-top:8px;font-weight:700}
+            
+    //       <>
+    //     </head>
+    //     <body>
+    //       <h2>${escapeHtml(doc.title)}</h2>
+    //       <div class="meta">
+    //         <div><b>Fan:</b> ${escapeHtml(doc.subject)}</div>
+    //         <div><b>Sinf:</b> ${escapeHtml(doc.grade)}</div>
+    //         <div><b>Mavzu:</b> ${escapeHtml(doc.topic)}</div>
+    //       </div>
+    //       ${buildRichHtmlContent(doc.content || doc.items.join('\n'), doc.type)}
+    //     </body>
+    //     </html>`;
+    //   downloadBlob(htmlContent, safeName + '.doc', 'application/msword');
+    //   totalDownloads += 1;
+    //   saveState();
+    //   updateUsageUI();
+
+    //   await trackEvent("download_success", {
+    //     local_document_id: id,
+    //     title: doc.title,
+    //     charged_plan: currentPlan,
+    //     charged_amount: currentPlan === 'Donabay' ? FILE_PRICE : 0
+    //   });
+
+    //   toast('Fayl yuklab olindi');
+    // }
 
     function canDownload(doc){
       if(currentPlan === 'Pro') return proFilesLeft > 0;
